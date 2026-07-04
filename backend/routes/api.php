@@ -18,6 +18,9 @@ use App\Http\Controllers\KeywordController;
 use App\Http\Controllers\MicrosoftOAuthController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\EmailHealthController;
+use App\Http\Controllers\RuleController;
+use App\Http\Controllers\AlertController;
+use App\Http\Controllers\SignatureManagementController;
 use Illuminate\Support\Facades\Route;
 
 /*
