@@ -86,6 +86,7 @@ export default function SignatureEditor({ template, signature, onSave, onClose }
 
   return (
     <Modal
+      open={true}
       onClose={onClose}
       title={signature ? '✏️ Edit Signature' : '✨ Create Signature'}
     >
