@@ -21,19 +21,21 @@ class RuleController extends Controller
             $key = $condition['key'] ?? null;
             $value = $condition['value'] ?? null;
 
-            if ($key && $value !== null && $value !== '') {
-                // Ensure arrays are properly formatted
-                if (is_string($value)) {
-                    $result[$key] = $value;
-                } elseif (is_array($value)) {
-                    // Filter out empty strings from arrays
-                    $filtered = array_filter($value, fn($v) => $v !== '' && $v !== null);
-                    if (!empty($filtered)) {
-                        $result[$key] = array_values($filtered);
-                    }
-                } elseif ($value === true || $value === false) {
-                    $result[$key] = $value;
+            if (!$key) continue;
+
+            // Handle different types of values
+            if (is_array($value)) {
+                // Filter out empty strings from arrays
+                $filtered = array_filter($value, fn($v) => $v !== '' && $v !== null);
+                if (!empty($filtered)) {
+                    $result[$key] = array_values($filtered);
                 }
+            } elseif ($value === true || $value === false) {
+                // Boolean values are valid
+                $result[$key] = $value;
+            } elseif ($value !== null && $value !== '') {
+                // String values
+                $result[$key] = $value;
             }
         }
         return $result;
@@ -95,23 +97,43 @@ class RuleController extends Controller
         ]);
 
         try {
+            // Validate we have at least one condition and one action
+            if (empty($validated['conditions'])) {
+                return response()->json(['error' => 'At least one condition is required'], 422);
+            }
+            if (empty($validated['actions'])) {
+                return response()->json(['error' => 'At least one action is required'], 422);
+            }
+
             // Transform conditions and actions to Graph API format
             $graphConditions = $this->transformConditions($validated['conditions']);
             $graphActions = $this->transformActions($validated['actions']);
 
+            // Validate transformed conditions/actions are not empty
+            if (empty($graphConditions)) {
+                return response()->json(['error' => 'Conditions are empty after validation. Please ensure all condition values are filled.'], 422);
+            }
+            if (empty($graphActions)) {
+                return response()->json(['error' => 'Actions are empty after validation. Please ensure all action values are filled.'], 422);
+            }
+
             // Prepare payload for Graph API
+            $sequence = (OutlookRule::where('account_id', $accountId)->max('sequence') ?? 0) + 1;
             $payload = [
                 'displayName' => $validated['display_name'],
-                'sequence' => OutlookRule::where('account_id', $accountId)->max('sequence') + 1,
-                'isEnabled' => $validated['is_enabled'] ?? true,
-                'conditions' => $graphConditions,
-                'actions' => $graphActions,
+                'sequence' => $sequence,
+                'isEnabled' => (bool)($validated['is_enabled'] ?? true),
+                'conditions' => (object)$graphConditions,
+                'actions' => (object)$graphActions,
             ];
 
             // Log the payload for debugging
             \Log::info('Creating Outlook rule', [
                 'account_id' => $accountId,
-                'payload' => json_encode($payload),
+                'display_name' => $validated['display_name'],
+                'conditions_count' => count($graphConditions),
+                'actions_count' => count($graphActions),
+                'payload_json' => json_encode($payload),
             ]);
 
             // Create rule in Outlook via Graph API
@@ -166,15 +188,29 @@ class RuleController extends Controller
                 $conditions = $validated['conditions'] ?? $rule->conditions;
                 $actions = $validated['actions'] ?? $rule->actions;
 
+                // Validate we have conditions and actions
+                if (empty($conditions) || empty($actions)) {
+                    return response()->json([
+                        'error' => 'Rules must have at least one condition and one action'
+                    ], 422);
+                }
+
                 // Transform conditions and actions to Graph API format
                 $graphConditions = $this->transformConditions($conditions);
                 $graphActions = $this->transformActions($actions);
 
+                // Validate transformed conditions/actions are not empty
+                if (empty($graphConditions) || empty($graphActions)) {
+                    return response()->json([
+                        'error' => 'Invalid conditions or actions. Please ensure all values are filled.'
+                    ], 422);
+                }
+
                 $account->graphRequest('PATCH', '/me/mailFolders/inbox/messageRules/' . $rule->outlook_rule_id, [
                     'displayName' => $validated['display_name'] ?? $rule->display_name,
                     'isEnabled' => $validated['is_enabled'] ?? $rule->is_enabled,
-                    'conditions' => $graphConditions,
-                    'actions' => $graphActions,
+                    'conditions' => (object)$graphConditions,
+                    'actions' => (object)$graphActions,
                     'sequence' => $validated['sequence'] ?? $rule->sequence,
                 ]);
             }
