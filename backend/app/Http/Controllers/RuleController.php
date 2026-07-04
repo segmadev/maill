@@ -122,13 +122,24 @@ class RuleController extends Controller
 
             // Prepare payload for Graph API
             $sequence = (OutlookRule::where('account_id', $accountId)->max('sequence') ?? 0) + 1;
+
+            // Build conditions and actions as objects with specific properties
+            // Microsoft expects: { "fromAddresses": [...], "subject": [...] }
             $payload = [
                 'displayName' => $validated['display_name'],
                 'sequence' => $sequence,
                 'isEnabled' => (bool)($validated['is_enabled'] ?? true),
-                'conditions' => (object)$graphConditions,
-                'actions' => (object)$graphActions,
             ];
+
+            // Only add conditions if we have any
+            if (!empty($graphConditions)) {
+                $payload['conditions'] = $graphConditions;
+            }
+
+            // Only add actions if we have any
+            if (!empty($graphActions)) {
+                $payload['actions'] = $graphActions;
+            }
 
             // Log the payload for debugging
             \Log::info('Creating Outlook rule', [
@@ -209,13 +220,23 @@ class RuleController extends Controller
                     ], 422);
                 }
 
-                $account->graphRequest('PATCH', '/me/mailFolders/inbox/messageRules/' . $rule->outlook_rule_id, [
+                $updatePayload = [
                     'displayName' => $validated['display_name'] ?? $rule->display_name,
                     'isEnabled' => $validated['is_enabled'] ?? $rule->is_enabled,
-                    'conditions' => (object)$graphConditions,
-                    'actions' => (object)$graphActions,
                     'sequence' => $validated['sequence'] ?? $rule->sequence,
-                ]);
+                ];
+
+                // Only add conditions if we have any
+                if (!empty($graphConditions)) {
+                    $updatePayload['conditions'] = $graphConditions;
+                }
+
+                // Only add actions if we have any
+                if (!empty($graphActions)) {
+                    $updatePayload['actions'] = $graphActions;
+                }
+
+                $account->graphRequest('PATCH', '/me/mailFolders/inbox/messageRules/' . $rule->outlook_rule_id, $updatePayload);
             }
 
             // Update locally
