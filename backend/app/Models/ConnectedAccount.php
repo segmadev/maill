@@ -142,7 +142,7 @@ class ConnectedAccount extends Model
      */
     public function graphRequest(string $method, string $endpoint, array $data = []): array
     {
-        $encryptionService = app(\App\Services\EncryptionService::class);
+        $encryptionService = app(\App\Services\TokenEncryptionService::class);
         $token = $encryptionService->decrypt($this->access_token);
 
         $client = new \GuzzleHttp\Client([
