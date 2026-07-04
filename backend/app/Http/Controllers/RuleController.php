@@ -11,8 +11,8 @@ class RuleController extends Controller
 {
     /**
      * Transform conditions from frontend format to Graph API format
-     * Frontend: [{ key: 'fromAddresses', value: ['email@example.com'] }]
-     * Graph API: { fromAddresses: ['email@example.com'] }
+     * Frontend: [{ key: 'fromAddresses', value: ['email@example.com'] }, { key: 'hasAttachments', value: true }]
+     * Graph API: { fromAddresses: ['email@example.com'], hasAttachments: true }
      */
     private function transformConditions(array $conditions): array
     {
@@ -30,9 +30,12 @@ class RuleController extends Controller
                 if (!empty($filtered)) {
                     $result[$key] = array_values($filtered);
                 }
-            } elseif ($value === true || $value === false) {
-                // Boolean values are valid
-                $result[$key] = $value;
+            } elseif ($value === true) {
+                // Boolean true is always valid
+                $result[$key] = true;
+            } elseif ($value === false) {
+                // Boolean false - skip it, as it means "not this condition"
+                continue;
             } elseif ($value !== null && $value !== '') {
                 // String values
                 $result[$key] = $value;

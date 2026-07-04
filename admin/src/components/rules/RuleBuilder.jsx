@@ -34,11 +34,20 @@ export default function RuleBuilder({ isOpen, onClose, onSave, rule = null, fold
 
   const addCondition = () => {
     const conditionKey = Object.keys(CONDITIONS)[0]
+    const condDef = CONDITIONS[conditionKey]
+    let initialValue = ''
+
+    if (condDef.type === 'email-list' || condDef.type === 'string-list') {
+      initialValue = []
+    } else if (condDef.type === 'boolean') {
+      initialValue = true
+    }
+
     setConditions([
       ...conditions,
       {
         key: conditionKey,
-        value: CONDITIONS[conditionKey].type === 'email-list' ? [] : '',
+        value: initialValue,
       },
     ])
   }
@@ -55,11 +64,20 @@ export default function RuleBuilder({ isOpen, onClose, onSave, rule = null, fold
 
   const addAction = () => {
     const actionKey = Object.keys(ACTIONS)[0]
+    const actionDef = ACTIONS[actionKey]
+    let initialValue = ''
+
+    if (actionDef.type === 'email-list' || actionDef.type === 'string-list') {
+      initialValue = []
+    } else if (actionDef.type === 'boolean') {
+      initialValue = true
+    }
+
     setActions([
       ...actions,
       {
         key: actionKey,
-        value: ACTIONS[actionKey].type === 'email-list' ? [] : '',
+        value: initialValue,
       },
     ])
   }
@@ -292,6 +310,18 @@ function ConditionRow({ condition, index, onUpdate, onRemove, folders }) {
           ))}
         </select>
       )}
+
+      {condDef?.type === 'boolean' && (
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={condition.value === true}
+            onChange={(e) => onUpdate(index, { value: e.target.checked })}
+            className="rounded"
+          />
+          <span className="text-xs text-gray-300">{condDef.description}</span>
+        </label>
+      )}
     </div>
   )
 }
@@ -355,6 +385,18 @@ function ActionRow({ action, index, onUpdate, onRemove, folders }) {
           rows={2}
           className="w-full bg-surface-raised border border-surface-border rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-brand resize-none"
         />
+      )}
+
+      {actionDef?.type === 'boolean' && (
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={action.value === true}
+            onChange={(e) => onUpdate(index, { value: e.target.checked })}
+            className="rounded"
+          />
+          <span className="text-xs text-gray-300">{actionDef.description}</span>
+        </label>
       )}
     </div>
   )
