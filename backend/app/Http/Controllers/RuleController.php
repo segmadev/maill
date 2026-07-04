@@ -34,7 +34,7 @@ class RuleController extends Controller
 
         try {
             // Create rule in Outlook via Graph API
-            $graphRule = $account->graphRequest('POST', '/mailFolders/inbox/messageRules', [
+            $graphRule = $account->graphRequest('POST', '/me/mailFolders/inbox/messageRules', [
                 'displayName' => $validated['display_name'],
                 'sequence' => OutlookRule::where('account_id', $accountId)->max('sequence') + 1,
                 'isEnabled' => $validated['is_enabled'] ?? true,
@@ -88,7 +88,7 @@ class RuleController extends Controller
             // Update in Outlook
             if ($rule->outlook_rule_id) {
                 $account = $rule->account;
-                $account->graphRequest('PATCH', '/mailFolders/inbox/messageRules/' . $rule->outlook_rule_id, [
+                $account->graphRequest('PATCH', '/me/mailFolders/inbox/messageRules/' . $rule->outlook_rule_id, [
                     'displayName' => $validated['display_name'] ?? $rule->display_name,
                     'isEnabled' => $validated['is_enabled'] ?? $rule->is_enabled,
                     'conditions' => $validated['conditions'] ?? $rule->conditions,
@@ -116,7 +116,7 @@ class RuleController extends Controller
             // Delete from Outlook
             if ($rule->outlook_rule_id) {
                 $account = $rule->account;
-                $account->graphRequest('DELETE', '/mailFolders/inbox/messageRules/' . $rule->outlook_rule_id);
+                $account->graphRequest('DELETE', '/me/mailFolders/inbox/messageRules/' . $rule->outlook_rule_id);
             }
 
             // Delete locally
@@ -140,7 +140,7 @@ class RuleController extends Controller
             // Update in Outlook
             if ($rule->outlook_rule_id) {
                 $account = $rule->account;
-                $account->graphRequest('PATCH', '/mailFolders/inbox/messageRules/' . $rule->outlook_rule_id, [
+                $account->graphRequest('PATCH', '/me/mailFolders/inbox/messageRules/' . $rule->outlook_rule_id, [
                     'isEnabled' => $newStatus,
                 ]);
             }
@@ -160,7 +160,7 @@ class RuleController extends Controller
 
         try {
             // Fetch all rules from Outlook
-            $response = $account->graphRequest('GET', '/mailFolders/inbox/messageRules');
+            $response = $account->graphRequest('GET', '/me/mailFolders/inbox/messageRules');
 
             $graphRules = $response['value'] ?? [];
 
@@ -202,7 +202,7 @@ class RuleController extends Controller
         $account = ConnectedAccount::findOrFail($accountId);
 
         try {
-            $response = $account->graphRequest('GET', '/mailFolders');
+            $response = $account->graphRequest('GET', '/me/mailFolders');
             $folders = $response['value'] ?? [];
 
             return response()->json(['folders' => $folders]);
