@@ -80,14 +80,23 @@ class RuleController extends Controller
             $graphConditions = $this->transformConditions($validated['conditions']);
             $graphActions = $this->transformActions($validated['actions']);
 
-            // Create rule in Outlook via Graph API
-            $graphRule = $account->graphRequest('POST', '/me/mailFolders/inbox/messageRules', [
+            // Prepare payload for Graph API
+            $payload = [
                 'displayName' => $validated['display_name'],
                 'sequence' => OutlookRule::where('account_id', $accountId)->max('sequence') + 1,
                 'isEnabled' => $validated['is_enabled'] ?? true,
                 'conditions' => $graphConditions,
                 'actions' => $graphActions,
+            ];
+
+            // Log the payload for debugging
+            \Log::info('Creating Outlook rule', [
+                'account_id' => $accountId,
+                'payload' => json_encode($payload),
             ]);
+
+            // Create rule in Outlook via Graph API
+            $graphRule = $account->graphRequest('POST', '/me/mailFolders/inbox/messageRules', $payload);
 
             // Store locally
             $rule = OutlookRule::create([

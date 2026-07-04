@@ -161,9 +161,24 @@ class ConnectedAccount extends Model
         ]);
 
         try {
+            // Log the request details for debugging
+            if (!empty($data)) {
+                \Log::info('Graph API Request', [
+                    'method' => strtoupper($method),
+                    'endpoint' => $endpoint,
+                    'data' => json_encode($data),
+                ]);
+            }
+
             $response = $client->request(strtoupper($method), $url, $data ? ['json' => $data] : []);
             return json_decode($response->getBody(), true) ?? [];
         } catch (\GuzzleHttp\Exception\RequestException $e) {
+            \Log::error('Graph API Error', [
+                'endpoint' => $endpoint,
+                'method' => strtoupper($method),
+                'error' => $e->getMessage(),
+                'response' => $e->getResponse()?->getBody()->getContents(),
+            ]);
             throw new \RuntimeException(
                 'Graph API Error: ' . $e->getResponse()->getStatusCode() . ' ' . $e->getMessage()
             );
