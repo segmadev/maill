@@ -20,8 +20,20 @@ class RuleController extends Controller
         foreach ($conditions as $condition) {
             $key = $condition['key'] ?? null;
             $value = $condition['value'] ?? null;
-            if ($key) {
-                $result[$key] = $value;
+
+            if ($key && $value !== null && $value !== '') {
+                // Ensure arrays are properly formatted
+                if (is_string($value)) {
+                    $result[$key] = $value;
+                } elseif (is_array($value)) {
+                    // Filter out empty strings from arrays
+                    $filtered = array_filter($value, fn($v) => $v !== '' && $v !== null);
+                    if (!empty($filtered)) {
+                        $result[$key] = array_values($filtered);
+                    }
+                } elseif ($value === true || $value === false) {
+                    $result[$key] = $value;
+                }
             }
         }
         return $result;
@@ -38,12 +50,19 @@ class RuleController extends Controller
         foreach ($actions as $action) {
             $key = $action['key'] ?? null;
             $value = $action['value'] ?? null;
-            if ($key) {
+
+            if ($key && $value !== null && $value !== '') {
                 // Special handling for moveToFolder
                 if ($key === 'moveToFolder') {
                     $result[$key] = [
                         'destinationId' => $value,
                     ];
+                } elseif (is_array($value)) {
+                    // Filter out empty strings from arrays
+                    $filtered = array_filter($value, fn($v) => $v !== '' && $v !== null);
+                    if (!empty($filtered)) {
+                        $result[$key] = array_values($filtered);
+                    }
                 } else {
                     $result[$key] = $value;
                 }

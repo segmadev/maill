@@ -181,12 +181,13 @@ export default function RulesList({ accountId, rules, onRulesChange, folders }) 
               await createRule(accountId, ruleData)
               toast.success('Rule created')
             }
-            onRulesChange()
             setShowBuilder(false)
             setEditingRule(null)
+            onRulesChange()
           } catch (err) {
-            toast.error('Failed to save rule')
-            console.error(err)
+            const errorMsg = err?.response?.data?.error || err?.message || 'Failed to save rule'
+            toast.error(errorMsg)
+            console.error('Rule save error:', err)
           }
         }}
         rule={editingRule}
