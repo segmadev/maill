@@ -14,6 +14,7 @@ export default function ConnectAccountModal({ open, onClose, onSuccess }) {
   const [testingSmtp, setTestingSmtp] = useState(false)
   const [smtpTestResult, setSmtpTestResult] = useState(null)
   const [showPasswords, setShowPasswords] = useState({ smtp: false })
+  const [scopes, setScopes] = useState([])
 
   // SMTP form
   const [smtpAccountType, setSmtpAccountType] = useState('personal') // 'personal' or 'business'
@@ -33,6 +34,22 @@ export default function ConnectAccountModal({ open, onClose, onSuccess }) {
     use_tls: true,
     use_ssl: false,
   })
+
+  useEffect(() => {
+    if (open) {
+      const fetchScopes = async () => {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_BASE}/settings/microsoft-scopes`)
+          const data = await response.json()
+          setScopes(data.scopes || [])
+        } catch (error) {
+          console.error('Failed to fetch scopes:', error)
+          setScopes([])
+        }
+      }
+      fetchScopes()
+    }
+  }, [open])
 
   const toggleCollapsible = (key) => {
     setSmtpCollapsibles(prev => ({
@@ -149,13 +166,15 @@ export default function ConnectAccountModal({ open, onClose, onSuccess }) {
                   </div>
                   <div className="mt-3 pt-3 border-t border-gray-700">
                     <p className="text-xs text-gray-500 font-semibold mb-1.5">Requested scopes:</p>
-                    <div className="space-y-1">
-                      <p className="text-xs text-gray-400">• openid</p>
-                      <p className="text-xs text-gray-400">• offline_access (refresh token)</p>
-                      <p className="text-xs text-gray-400">• User.Read (profile)</p>
-                      <p className="text-xs text-gray-400">• Mail.Read (inbox access)</p>
-                      <p className="text-xs text-gray-400">• MailboxSettings.ReadWrite (manage rules)</p>
-                    </div>
+                    {scopes.length > 0 ? (
+                      <div className="space-y-1">
+                        {scopes.map((scope) => (
+                          <p key={scope} className="text-xs text-gray-400">• {scope}</p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500 italic">Loading scopes...</p>
+                    )}
                   </div>
                 </div>
               </div>

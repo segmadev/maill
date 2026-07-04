@@ -36,6 +36,7 @@ use Illuminate\Support\Facades\Route;
 // Exposes only the login_page group so the user login page can fetch its
 // appearance without an authenticated session.
 Route::get('/settings/login-page', [SettingsController::class, 'loginPage']);
+Route::get('/settings/microsoft-scopes', [SettingsController::class, 'getMicrosoftScopes']);
 
 // ----- Public auth routes (no JWT required) -----
 Route::prefix('auth')->group(function () {

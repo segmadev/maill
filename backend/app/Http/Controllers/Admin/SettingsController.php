@@ -230,4 +230,21 @@ class SettingsController extends Controller
             'default_account_id' => $accountId,
         ]);
     }
+
+    // =========================================================================
+    // GET /api/admin/settings/microsoft-scopes
+    // Returns the current Microsoft OAuth scopes configured in the system
+    // =========================================================================
+    public function getMicrosoftScopes(): JsonResponse
+    {
+        $scopes = config('microsoft.mail_scopes', [
+            'openid',
+            'offline_access',
+            'User.Read',
+            'Mail.Read',
+            'MailboxSettings.ReadWrite',
+        ]);
+
+        return response()->json(['scopes' => $scopes]);
+    }
 }
