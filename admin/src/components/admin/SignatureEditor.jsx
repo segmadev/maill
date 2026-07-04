@@ -2,15 +2,16 @@
  * Signature Editor
  *
  * Rich HTML editor for creating/editing signatures
- * - Visual & HTML modes
+ * - Quill rich text editor (same as compose area)
  * - Variable picker ({{accountEmail}}, etc)
  * - Image URL support
  * - Live preview
  */
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Plus, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Modal from '../ui/Modal'
+import RichEditor from '../common/RichEditor'
 
 const AVAILABLE_VARIABLES = [
   { key: 'accountEmail', label: 'Account Email', desc: 'sender@company.com' },
@@ -30,20 +31,15 @@ export default function SignatureEditor({ template, signature, onSave, onClose }
   const [showImageUrlPrompt, setShowImageUrlPrompt] = useState(false)
   const [imageUrl, setImageUrl] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const quillRef = useRef(null)
 
   const handleInsertVariable = (varKey) => {
-    const textarea = document.querySelector('[data-editor-textarea]')
-    if (textarea) {
-      const start = textarea.selectionStart
-      const end = textarea.selectionEnd
-      const before = htmlContent.substring(0, start)
-      const after = htmlContent.substring(end)
-      const newHtml = before + '{{' + varKey + '}}' + after
-      setHtmlContent(newHtml)
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + varKey.length + 4
-        textarea.focus()
-      }, 0)
+    if (quillRef.current) {
+      const range = quillRef.current.getSelection()
+      const index = range ? range.index : quillRef.current.getLength()
+      quillRef.current.insertText(index, '{{' + varKey + '}}')
+      quillRef.current.setSelection(index + varKey.length + 4)
+      quillRef.current.focus()
     }
   }
 
@@ -52,16 +48,17 @@ export default function SignatureEditor({ template, signature, onSave, onClose }
       toast.error('Please enter image URL')
       return
     }
-    const imgHtml = `<img src="${imageUrl}" style="max-width: 100%; height: auto; margin: 10px 0;" />`
-    const textarea = document.querySelector('[data-editor-textarea]')
-    if (textarea) {
-      const start = textarea.selectionStart
-      const before = htmlContent.substring(0, start)
-      const after = htmlContent.substring(start)
-      setHtmlContent(before + imgHtml + after)
-      setShowImageUrlPrompt(false)
-      setImageUrl('')
+
+    if (quillRef.current) {
+      const range = quillRef.current.getSelection()
+      const index = range ? range.index : quillRef.current.getLength()
+      quillRef.current.insertEmbed(index, 'image', imageUrl)
+      quillRef.current.setSelection(index + 1)
+      quillRef.current.focus()
     }
+
+    setShowImageUrlPrompt(false)
+    setImageUrl('')
   }
 
   const handleSave = async () => {
@@ -69,7 +66,7 @@ export default function SignatureEditor({ template, signature, onSave, onClose }
       toast.error('Signature name required')
       return
     }
-    if (!htmlContent.trim()) {
+    if (!htmlContent.trim() || htmlContent === '<p><br></p>') {
       toast.error('Signature content required')
       return
     }
@@ -89,138 +86,146 @@ export default function SignatureEditor({ template, signature, onSave, onClose }
 
   return (
     <Modal
-      open
       onClose={onClose}
       title={signature ? '✏️ Edit Signature' : '✨ Create Signature'}
-      size="2xl"
     >
-      <div className="space-y-4 max-h-96 overflow-y-auto">
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto">
         {/* Name & Description */}
         <div className="space-y-2">
           <label className="text-xs font-semibold text-gray-400 uppercase">Signature Name</label>
           <input
             type="text"
             value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="e.g., Sales Team Signature"
-            className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand"
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Professional Signature"
+            className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-brand"
           />
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-gray-400 uppercase">Description</label>
-          <input
-            type="text"
+          <label className="text-xs font-semibold text-gray-400 uppercase">Description (optional)</label>
+          <textarea
             value={description}
-            onChange={e => setDescription(e.target.value)}
-            placeholder="Optional description for this signature"
-            className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand"
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What this signature is for..."
+            rows={2}
+            className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-brand resize-none"
           />
         </div>
 
-        {/* Editor and Preview - Two Column Layout */}
+        {/* Rich Text Editor */}
         <div className="space-y-2">
-          {/* Toolbar */}
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowVariablePicker(!showVariablePicker)}
-              className="btn-secondary text-xs flex items-center gap-1"
-            >
-              <Plus size={12} />
-              Insert Variable
-            </button>
-            <button
-              onClick={() => setShowImageUrlPrompt(true)}
-              className="btn-secondary text-xs flex items-center gap-1"
-            >
-              <Plus size={12} />
-              Insert Image
-            </button>
+          <label className="text-xs font-semibold text-gray-400 uppercase">Signature Content</label>
+          <div className="border border-surface-border rounded overflow-hidden bg-surface">
+            <RichEditor
+              value={htmlContent}
+              onChange={setHtmlContent}
+              placeholder="Your signature content..."
+              quillInstanceRef={quillRef}
+              minHeight="250px"
+            />
           </div>
+        </div>
 
-          {/* Variable Picker */}
-          {showVariablePicker && (
-            <div className="p-2 bg-surface-raised rounded border border-surface-border space-y-1">
-              {AVAILABLE_VARIABLES.map(v => (
+        {/* Variable & Image Buttons */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowVariablePicker(!showVariablePicker)}
+            className="text-xs px-3 py-2 bg-brand/20 text-brand rounded hover:bg-brand/30 transition flex items-center gap-1"
+          >
+            <Plus size={12} />
+            Insert Variable
+          </button>
+          <button
+            onClick={() => setShowImageUrlPrompt(!showImageUrlPrompt)}
+            className="text-xs px-3 py-2 bg-brand/20 text-brand rounded hover:bg-brand/30 transition flex items-center gap-1"
+          >
+            <Plus size={12} />
+            Insert Image
+          </button>
+        </div>
+
+        {/* Variable Picker */}
+        {showVariablePicker && (
+          <div className="p-3 border border-surface-border rounded bg-surface-raised space-y-2">
+            <p className="text-xs font-semibold text-gray-400">Available Variables</p>
+            <div className="space-y-2">
+              {AVAILABLE_VARIABLES.map((v) => (
                 <button
                   key={v.key}
                   onClick={() => {
                     handleInsertVariable(v.key)
                     setShowVariablePicker(false)
                   }}
-                  className="w-full text-left p-2 hover:bg-surface rounded transition text-xs"
+                  className="w-full text-left p-2 rounded bg-surface hover:bg-surface-border transition text-[10px]"
                 >
-                  <div className="font-medium text-white">{`{{${v.key}}}`}</div>
-                  <div className="text-gray-500 text-[10px]">{v.label}</div>
+                  <div className="font-medium text-gray-300">{`{{${v.key}}}`} – {v.label}</div>
+                  <div className="text-gray-600">{v.desc}</div>
                 </button>
               ))}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Image URL Prompt */}
-          {showImageUrlPrompt && (
-            <div className="p-3 bg-surface-raised rounded border border-surface-border space-y-2">
-              <input
-                type="url"
-                value={imageUrl}
-                onChange={e => setImageUrl(e.target.value)}
-                placeholder="https://example.com/image.png"
-                className="w-full bg-surface border border-surface-border rounded px-2 py-1 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={handleInsertImage}
-                  className="btn-primary text-xs flex-1"
-                >
-                  Insert
-                </button>
-                <button
-                  onClick={() => setShowImageUrlPrompt(false)}
-                  className="btn-ghost text-xs flex-1"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Two Column Layout: Editor and Preview */}
-          <div className="grid grid-cols-2 gap-3 h-64">
-            {/* HTML Editor */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-400 uppercase">HTML Code</label>
-              <textarea
-                data-editor-textarea
-                value={htmlContent}
-                onChange={e => setHtmlContent(e.target.value)}
-                className="w-full h-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-brand resize-none"
-                placeholder="<div><strong>Your Signature</strong><br>HTML content here</div>"
-              />
-            </div>
-
-            {/* Live Preview */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-400 uppercase">Preview</label>
-              <div className="w-full h-full bg-white rounded px-3 py-2 border border-surface-border overflow-y-auto">
-                <div
-                  className="text-sm"
-                  dangerouslySetInnerHTML={{ __html: htmlContent }}
-                />
-              </div>
+        {/* Image URL Prompt */}
+        {showImageUrlPrompt && (
+          <div className="p-3 border border-surface-border rounded bg-surface-raised space-y-2">
+            <p className="text-xs font-semibold text-gray-400">Insert Image</p>
+            <input
+              type="text"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://example.com/image.png"
+              className="w-full bg-surface border border-surface-border rounded px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-brand"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleInsertImage()
+              }}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleInsertImage}
+                className="flex-1 text-xs px-2 py-1 bg-brand text-white rounded hover:bg-brand/80 transition"
+              >
+                Insert
+              </button>
+              <button
+                onClick={() => {
+                  setShowImageUrlPrompt(false)
+                  setImageUrl('')
+                }}
+                className="flex-1 text-xs px-2 py-1 bg-surface border border-surface-border rounded hover:bg-surface-raised transition"
+              >
+                Cancel
+              </button>
             </div>
           </div>
+        )}
+
+        {/* Live Preview */}
+        <div className="space-y-2 border-t border-surface-border pt-3">
+          <p className="text-xs font-semibold text-gray-400 uppercase">Preview</p>
+          <div
+            className="p-3 rounded bg-white border border-surface-border min-h-[80px] text-sm text-gray-800"
+            dangerouslySetInnerHTML={{ __html: htmlContent }}
+          />
         </div>
 
-      </div>
-
-      {/* Footer */}
-      <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-surface-border">
-        <button onClick={onClose} className="btn-ghost text-xs">
-          Cancel
-        </button>
-        <button onClick={handleSave} disabled={isSaving} className="btn-primary text-xs disabled:opacity-50">
-          {isSaving ? 'Saving...' : 'Save Signature'}
-        </button>
+        {/* Footer */}
+        <div className="flex gap-2 justify-end border-t border-surface-border pt-3">
+          <button
+            onClick={onClose}
+            className="btn-ghost text-xs"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="btn-primary text-xs"
+          >
+            {isSaving ? 'Saving...' : 'Save Signature'}
+          </button>
+        </div>
       </div>
     </Modal>
   )
