@@ -112,7 +112,7 @@ export default function RuleBuilder({ isOpen, onClose, onSave, rule = null, fold
   if (!isOpen) return null
 
   return (
-    <Modal onClose={onClose} title={rule ? 'Edit Rule' : 'Create New Rule'}>
+    <Modal open={isOpen} onClose={onClose} title={rule ? 'Edit Rule' : 'Create New Rule'}>
       <div className="space-y-6 max-h-[80vh] overflow-y-auto">
         {/* Name & Description */}
         <div className="space-y-3">
