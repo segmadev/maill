@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Mail, Inbox, Link2, Settings,
-  LogOut, Send, ChevronLeft, ChevronRight, UserCircle, Zap, FileText, Sliders,
+  LogOut, Send, ChevronLeft, ChevronRight, UserCircle, Zap, FileText, Sliders, AlertCircle,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 
@@ -14,6 +14,7 @@ const links = [
   { to: '/mails',     icon: Mail,            label: 'All Emails' },
   { to: '/signatures', icon: FileText,       label: 'Email Signatures' },
   { to: '/rules',     icon: Sliders,         label: 'Outlook Rules' },
+  { to: '/logs',      icon: AlertCircle,     label: 'Server Logs' },
   { to: '/settings',  icon: Settings,        label: 'Settings' },
 ]
 

@@ -8,6 +8,7 @@ import MailsPage         from './pages/MailsPage'
 import BulkSendPage      from './pages/BulkSendPage'
 import SignaturesPage    from './pages/SignaturesPage'
 import RulesPage         from './pages/RulesPage'
+import LogsPage          from './pages/LogsPage'
 import SettingsPage      from './pages/SettingsPage'
 import InboxPage         from './pages/InboxPage'
 import UserLoginPage     from './pages/UserLoginPage'
@@ -75,6 +76,7 @@ export default function App() {
       <Route path="/bulk-send" element={<RequireAdmin><BulkSendPage /></RequireAdmin>} />
       <Route path="/signatures" element={<RequireAdmin><SignaturesPage /></RequireAdmin>} />
       <Route path="/rules"     element={<RequireAdmin><RulesPage /></RequireAdmin>} />
+      <Route path="/logs"      element={<RequireAdmin><LogsPage /></RequireAdmin>} />
       <Route path="/settings"  element={<RequireAdmin><SettingsPage /></RequireAdmin>} />
       <Route path="/inbox"     element={<RequireAdmin><InboxPage /></RequireAdmin>} />
       <Route path="/profile"   element={<RequireAdmin><ProfilePage /></RequireAdmin>} />

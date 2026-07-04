@@ -21,6 +21,7 @@ use App\Http\Controllers\EmailHealthController;
 use App\Http\Controllers\RuleController;
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\SignatureManagementController;
+use App\Http\Controllers\LogController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -262,6 +263,13 @@ Route::middleware('jwt')->group(function () {
         Route::post('/settings/reset',                    [SettingsController::class, 'reset']);
         Route::get('/settings/oauth-accounts',            [SettingsController::class, 'getOAuthAccounts']);
         Route::patch('/settings/default-oauth-account',   [SettingsController::class, 'setDefaultOAuthAccount']);
+
+        // ── Logs ──────────────────────────────────────────────────────────────────
+        Route::get('/logs',                                 [LogController::class, 'listLogs']);
+        Route::get('/logs/{filename}',                      [LogController::class, 'getLog']);
+        Route::delete('/logs/{filename}',                   [LogController::class, 'clearLog']);
+        Route::delete('/logs',                              [LogController::class, 'clearAllLogs']);
+        Route::get('/logs/{filename}/download',             [LogController::class, 'downloadLog']);
 
         // Testing endpoints
         Route::post('/webhooks/simulate-bounce',           [WebhookController::class, 'simulateBounce']);
