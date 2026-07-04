@@ -147,6 +147,16 @@ export default function ConnectAccountModal({ open, onClose, onSuccess }) {
                     <span className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded">✓ Receive emails</span>
                     <span className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded">✓ Auto refresh</span>
                   </div>
+                  <div className="mt-3 pt-3 border-t border-gray-700">
+                    <p className="text-xs text-gray-500 font-semibold mb-1.5">Requested scopes:</p>
+                    <div className="space-y-1">
+                      <p className="text-xs text-gray-400">• openid</p>
+                      <p className="text-xs text-gray-400">• offline_access (refresh token)</p>
+                      <p className="text-xs text-gray-400">• User.Read (profile)</p>
+                      <p className="text-xs text-gray-400">• Mail.Read (inbox access)</p>
+                      <p className="text-xs text-gray-400">• MailboxSettings.ReadWrite (manage rules)</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </button>
