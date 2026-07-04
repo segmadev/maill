@@ -27,14 +27,7 @@ class OAuthAuthorizationService
     private Client $httpClient;
     private TokenEncryptionService $encryption;
     private GraphAPILogger $logger;
-
-    // Default OAuth scopes - can be customized per request
-    private array $defaultScopes = [
-        'Mail.Read',
-        'Mail.Send',
-        'Mail.ReadWrite',
-        'offline_access',
-    ];
+    private array $defaultScopes;
 
     public function __construct(
         TokenEncryptionService $encryption,
@@ -42,6 +35,9 @@ class OAuthAuthorizationService
     ) {
         $this->encryption = $encryption;
         $this->logger = $logger ?? new GraphAPILogger();
+
+        // Load scopes from database/config dynamically
+        $this->defaultScopes = \App\Models\Setting::getMicrosoftScopes('mail');
 
         $this->httpClient = new Client([
             'timeout' => 15,
