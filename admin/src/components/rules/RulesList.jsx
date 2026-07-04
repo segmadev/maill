@@ -185,9 +185,20 @@ export default function RulesList({ accountId, rules, onRulesChange, folders }) 
             setEditingRule(null)
             onRulesChange()
           } catch (err) {
-            const errorMsg = err?.response?.data?.error || err?.message || 'Failed to save rule'
+            // Extract error message from various response formats
+            let errorMsg = 'Failed to save rule'
+
+            if (err?.response?.data?.error) {
+              errorMsg = err.response.data.error
+            } else if (err?.response?.data?.message) {
+              errorMsg = err.response.data.message
+            } else if (err?.message) {
+              errorMsg = err.message
+            }
+
             toast.error(errorMsg)
             console.error('Rule save error:', err)
+            // Keep modal open on error so user can fix it
           }
         }}
         rule={editingRule}

@@ -359,7 +359,7 @@ function ActionRow({ action, index, onUpdate, onRemove, folders }) {
           className="w-full bg-surface-raised border border-surface-border rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-brand"
         >
           <option value="">Select folder...</option>
-          {folders.map((folder) => (
+          {Array.isArray(folders) && folders.map((folder) => (
             <option key={folder.id} value={folder.id}>
               {folder.displayName}
             </option>
