@@ -10,6 +10,60 @@ use Illuminate\Http\JsonResponse;
 class RuleController extends Controller
 {
     /**
+     * Convert Microsoft Graph format back to frontend format for editing
+     * Microsoft Graph: { "fromAddresses": [...], "hasAttachments": true }
+     * Frontend: [{ "key": "fromAddresses", "value": [...] }, ...]
+     */
+    private function convertConditionsToFrontend($graphFormat): array
+    {
+        if (is_array($graphFormat) && !empty($graphFormat)) {
+            // Check if it's already in frontend format
+            if (isset($graphFormat[0]['key'])) {
+                return $graphFormat;
+            }
+        }
+
+        // Convert from Microsoft Graph format to frontend format
+        $conditions = [];
+        if (is_array($graphFormat) || is_object($graphFormat)) {
+            foreach ((array)$graphFormat as $key => $value) {
+                $conditions[] = [
+                    'key' => $key,
+                    'value' => $value,
+                ];
+            }
+        }
+        return $conditions;
+    }
+
+    /**
+     * Convert Microsoft Graph format back to frontend format for editing
+     * Microsoft Graph: { "moveToFolder": "id", "assignCategories": [...] }
+     * Frontend: [{ "key": "moveToFolder", "value": "id" }, ...]
+     */
+    private function convertActionsToFrontend($graphFormat): array
+    {
+        if (is_array($graphFormat) && !empty($graphFormat)) {
+            // Check if it's already in frontend format
+            if (isset($graphFormat[0]['key'])) {
+                return $graphFormat;
+            }
+        }
+
+        // Convert from Microsoft Graph format to frontend format
+        $actions = [];
+        if (is_array($graphFormat) || is_object($graphFormat)) {
+            foreach ((array)$graphFormat as $key => $value) {
+                $actions[] = [
+                    'key' => $key,
+                    'value' => $value,
+                ];
+            }
+        }
+        return $actions;
+    }
+
+    /**
      * Transform conditions from frontend format to Graph API format
      * Frontend: [{ key: 'fromAddresses', value: ['email@example.com'] }, { key: 'hasAttachments', value: true }]
      * Graph API: { fromAddresses: ['email@example.com'], hasAttachments: true }
@@ -83,7 +137,12 @@ class RuleController extends Controller
     public function listByAccount($accountId): JsonResponse
     {
         $account = ConnectedAccount::findOrFail($accountId);
-        $rules = $account->rules()->orderBy('sequence')->get();
+        $rules = $account->rules()->orderBy('sequence')->get()
+            ->map(function ($rule) {
+                $rule->conditions = $this->convertConditionsToFrontend($rule->conditions);
+                $rule->actions = $this->convertActionsToFrontend($rule->actions);
+                return $rule;
+            });
 
         return response()->json([
             'rules' => $rules,
@@ -180,6 +239,10 @@ class RuleController extends Controller
         $rule = OutlookRule::where('account_id', $accountId)
             ->where('id', $ruleId)
             ->firstOrFail();
+
+        // Convert to frontend format for editing
+        $rule->conditions = $this->convertConditionsToFrontend($rule->conditions);
+        $rule->actions = $this->convertActionsToFrontend($rule->actions);
 
         return response()->json(['rule' => $rule]);
     }
