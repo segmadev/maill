@@ -47,7 +47,7 @@ class RuleController extends Controller
     /**
      * Transform actions from frontend format to Graph API format
      * Frontend: [{ key: 'moveToFolder', value: 'folderId' }]
-     * Graph API: { moveToFolder: { destinationId: 'folderId' } }
+     * Graph API: { moveToFolder: 'folderId' }
      */
     private function transformActions(array $actions): array
     {
@@ -56,21 +56,25 @@ class RuleController extends Controller
             $key = $action['key'] ?? null;
             $value = $action['value'] ?? null;
 
-            if ($key && $value !== null && $value !== '') {
-                // Special handling for moveToFolder
-                if ($key === 'moveToFolder') {
-                    $result[$key] = [
-                        'destinationId' => $value,
-                    ];
-                } elseif (is_array($value)) {
-                    // Filter out empty strings from arrays
-                    $filtered = array_filter($value, fn($v) => $v !== '' && $v !== null);
-                    if (!empty($filtered)) {
-                        $result[$key] = array_values($filtered);
-                    }
-                } else {
-                    $result[$key] = $value;
+            if (!$key) continue;
+
+            // Handle different types of values
+            if (is_array($value)) {
+                // Filter out empty strings from arrays
+                $filtered = array_filter($value, fn($v) => $v !== '' && $v !== null);
+                if (!empty($filtered)) {
+                    $result[$key] = array_values($filtered);
                 }
+            } elseif ($value === true) {
+                // Boolean true is always valid
+                $result[$key] = true;
+            } elseif ($value === false) {
+                // Boolean false - skip it
+                continue;
+            } elseif ($value !== null && $value !== '') {
+                // String values (folder IDs, email addresses, etc.)
+                // These go directly as the value, not wrapped in an object
+                $result[$key] = $value;
             }
         }
         return $result;
