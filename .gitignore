@@ -31,3 +31,4 @@ backend-fresh/storage
 backend-fresh/database/database.sqlite
 admin/dist
 admin/node_modules
+*/node_modules
