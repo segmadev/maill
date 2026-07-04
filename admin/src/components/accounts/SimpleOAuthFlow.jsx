@@ -22,12 +22,26 @@ export default function SimpleOAuthFlow({ open, email: initialEmail, onClose, on
   const [state, setState] = useState(null)
   const [errorMsg, setErrorMsg] = useState(null)
   const [email, setEmail] = useState(initialEmail || '')
+  const [scopes, setScopes] = useState([])
   const authWindowRef = useRef(null)
   const pollingIntervalRef = useRef(null)
 
-  // Cleanup on modal close
+  // Fetch scopes and cleanup on modal close
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      const fetchScopes = async () => {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_BASE}/settings/microsoft-scopes`)
+          const data = await response.json()
+          setScopes(data.scopes || [])
+        } catch (error) {
+          console.error('Failed to fetch scopes:', error)
+          // Fallback to defaults if API fails
+          setScopes(['Mail.Read', 'Mail.Send', 'Mail.ReadWrite', 'offline_access'])
+        }
+      }
+      fetchScopes()
+    } else {
       stopPolling()
       if (authWindowRef.current && !authWindowRef.current.closed) {
         authWindowRef.current.close()
@@ -53,7 +67,7 @@ export default function SimpleOAuthFlow({ open, email: initialEmail, onClose, on
         tenant_id: 'admin-settings',
         client_secret: 'admin-settings',
         email: email,
-        scopes: ['Mail.Read', 'Mail.Send', 'Mail.ReadWrite', 'offline_access'],
+        scopes: scopes.length > 0 ? scopes : ['Mail.Read', 'Mail.Send', 'Mail.ReadWrite', 'offline_access'],
       })
 
       if (!result.url) {
