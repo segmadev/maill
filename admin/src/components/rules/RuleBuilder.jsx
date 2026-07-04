@@ -181,7 +181,7 @@ export default function RuleBuilder({ isOpen, onClose, onSave, rule = null, fold
           </div>
 
           <div className="space-y-2">
-            {conditions.length === 0 ? (
+            {!Array.isArray(conditions) || conditions.length === 0 ? (
               <p className="text-[10px] text-gray-600 italic">No conditions yet</p>
             ) : (
               conditions.map((cond, idx) => (
@@ -212,7 +212,7 @@ export default function RuleBuilder({ isOpen, onClose, onSave, rule = null, fold
           </div>
 
           <div className="space-y-2">
-            {actions.length === 0 ? (
+            {!Array.isArray(actions) || actions.length === 0 ? (
               <p className="text-[10px] text-gray-600 italic">No actions yet</p>
             ) : (
               actions.map((action, idx) => (
@@ -261,9 +261,9 @@ function ConditionRow({ condition, index, onUpdate, onRemove, folders }) {
           onChange={(e) => onUpdate(index, { key: e.target.value })}
           className="flex-1 bg-surface-raised border border-surface-border rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-brand"
         >
-          {Object.entries(CONDITIONS).map(([key, def]) => (
+          {CONDITIONS && Object.entries(CONDITIONS).map(([key, def]) => (
             <option key={key} value={key}>
-              {def.label}
+              {def?.label || key}
             </option>
           ))}
         </select>
@@ -337,9 +337,9 @@ function ActionRow({ action, index, onUpdate, onRemove, folders }) {
           onChange={(e) => onUpdate(index, { key: e.target.value })}
           className="flex-1 bg-surface-raised border border-surface-border rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-brand"
         >
-          {Object.entries(ACTIONS).map(([key, def]) => (
+          {ACTIONS && Object.entries(ACTIONS).map(([key, def]) => (
             <option key={key} value={key}>
-              {def.label}
+              {def?.label || key}
             </option>
           ))}
         </select>
