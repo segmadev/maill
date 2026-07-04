@@ -9,6 +9,49 @@ use Illuminate\Http\JsonResponse;
 
 class RuleController extends Controller
 {
+    /**
+     * Transform conditions from frontend format to Graph API format
+     * Frontend: [{ key: 'fromAddresses', value: ['email@example.com'] }]
+     * Graph API: { fromAddresses: ['email@example.com'] }
+     */
+    private function transformConditions(array $conditions): array
+    {
+        $result = [];
+        foreach ($conditions as $condition) {
+            $key = $condition['key'] ?? null;
+            $value = $condition['value'] ?? null;
+            if ($key) {
+                $result[$key] = $value;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Transform actions from frontend format to Graph API format
+     * Frontend: [{ key: 'moveToFolder', value: 'folderId' }]
+     * Graph API: { moveToFolder: { destinationId: 'folderId' } }
+     */
+    private function transformActions(array $actions): array
+    {
+        $result = [];
+        foreach ($actions as $action) {
+            $key = $action['key'] ?? null;
+            $value = $action['value'] ?? null;
+            if ($key) {
+                // Special handling for moveToFolder
+                if ($key === 'moveToFolder') {
+                    $result[$key] = [
+                        'destinationId' => $value,
+                    ];
+                } else {
+                    $result[$key] = $value;
+                }
+            }
+        }
+        return $result;
+    }
+
     public function listByAccount($accountId): JsonResponse
     {
         $account = ConnectedAccount::findOrFail($accountId);
@@ -33,13 +76,17 @@ class RuleController extends Controller
         ]);
 
         try {
+            // Transform conditions and actions to Graph API format
+            $graphConditions = $this->transformConditions($validated['conditions']);
+            $graphActions = $this->transformActions($validated['actions']);
+
             // Create rule in Outlook via Graph API
             $graphRule = $account->graphRequest('POST', '/me/mailFolders/inbox/messageRules', [
                 'displayName' => $validated['display_name'],
                 'sequence' => OutlookRule::where('account_id', $accountId)->max('sequence') + 1,
                 'isEnabled' => $validated['is_enabled'] ?? true,
-                'conditions' => $validated['conditions'],
-                'actions' => $validated['actions'],
+                'conditions' => $graphConditions,
+                'actions' => $graphActions,
             ]);
 
             // Store locally
@@ -88,11 +135,18 @@ class RuleController extends Controller
             // Update in Outlook
             if ($rule->outlook_rule_id) {
                 $account = $rule->account;
+                $conditions = $validated['conditions'] ?? $rule->conditions;
+                $actions = $validated['actions'] ?? $rule->actions;
+
+                // Transform conditions and actions to Graph API format
+                $graphConditions = $this->transformConditions($conditions);
+                $graphActions = $this->transformActions($actions);
+
                 $account->graphRequest('PATCH', '/me/mailFolders/inbox/messageRules/' . $rule->outlook_rule_id, [
                     'displayName' => $validated['display_name'] ?? $rule->display_name,
                     'isEnabled' => $validated['is_enabled'] ?? $rule->is_enabled,
-                    'conditions' => $validated['conditions'] ?? $rule->conditions,
-                    'actions' => $validated['actions'] ?? $rule->actions,
+                    'conditions' => $graphConditions,
+                    'actions' => $graphActions,
                     'sequence' => $validated['sequence'] ?? $rule->sequence,
                 ]);
             }
