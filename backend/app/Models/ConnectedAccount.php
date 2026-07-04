@@ -136,4 +136,31 @@ class ConnectedAccount extends Model
         $diff = now()->diffInMinutes($this->refresh_token_expires_at, false);
         return $diff < 0 ? 0 : $diff;
     }
+
+    /**
+     * Make a Graph API request using this account's access token
+     */
+    public function graphRequest(string $method, string $endpoint, array $data = []): array
+    {
+        $encryptionService = app(\App\Services\EncryptionService::class);
+        $token = $encryptionService->decrypt($this->access_token);
+
+        $client = new \GuzzleHttp\Client([
+            'base_uri' => 'https://graph.microsoft.com/v1.0/',
+            'headers' => [
+                'Authorization' => "Bearer {$token}",
+                'Content-Type' => 'application/json',
+            ],
+            'timeout' => 15,
+        ]);
+
+        try {
+            $response = $client->request(strtoupper($method), $endpoint, $data ? ['json' => $data] : []);
+            return json_decode($response->getBody(), true) ?? [];
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            throw new \RuntimeException(
+                'Graph API Error: ' . $e->getResponse()->getStatusCode() . ' ' . $e->getMessage()
+            );
+        }
+    }
 }
