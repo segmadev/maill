@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Edit2, Trash2, RefreshCw, Plus, CheckCircle2, Circle } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { deleteRule, toggleRuleEnabled, syncRulesWithOutlook } from '../../api/admin'
+import { createRule, updateRule, deleteRule, toggleRuleEnabled, syncRulesWithOutlook } from '../../api/admin'
 import RuleBuilder from './RuleBuilder'
 
 export default function RulesList({ accountId, rules, onRulesChange, folders }) {
@@ -171,8 +171,23 @@ export default function RulesList({ accountId, rules, onRulesChange, folders }) 
           setEditingRule(null)
         }}
         onSave={async (ruleData) => {
-          // Save will be handled by parent, just close
-          onRulesChange()
+          try {
+            if (editingRule?.id) {
+              // Update existing rule
+              await updateRule(accountId, editingRule.id, ruleData)
+              toast.success('Rule updated')
+            } else {
+              // Create new rule
+              await createRule(accountId, ruleData)
+              toast.success('Rule created')
+            }
+            onRulesChange()
+            setShowBuilder(false)
+            setEditingRule(null)
+          } catch (err) {
+            toast.error('Failed to save rule')
+            console.error(err)
+          }
         }}
         rule={editingRule}
         folders={folders}
