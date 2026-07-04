@@ -163,10 +163,13 @@ class ConnectedAccount extends Model
         try {
             // Log the request details for debugging
             if (!empty($data)) {
+                $jsonData = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
                 \Log::info('Graph API Request', [
                     'method' => strtoupper($method),
                     'endpoint' => $endpoint,
-                    'data' => json_encode($data),
+                    'data_array' => $data,
+                    'data_json' => $jsonData,
+                    'json_error' => json_last_error_msg(),
                 ]);
             }
 
