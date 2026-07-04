@@ -1,0 +1,25 @@
+{
+  "records": [
+    {
+      "type": "SPF",
+      "name": "@",
+      "value": "v=spf1 ip4:YOUR_SERVER_IP ~all"
+    },
+    {
+      "type": "DKIM",
+      "name": "default._domainkey",
+      "value": "v=DKIM1; k=rsa; p=YOUR_PUBLIC_KEY"
+    },
+    {
+      "type": "DMARC",
+      "name": "_dmarc",
+      "value": "v=DMARC1; p=quarantine; rua=mailto:dmarc-reports@yourdomain.com"
+    },
+    {
+      "type": "MX",
+      "name": "@",
+      "value": "yourdomain.com",
+      "priority": 10
+    }
+  ]
+}

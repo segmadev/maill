@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    color-scheme: dark;
+  }
+
+  html, body, #root {
+    background-color: #0a0a0a !important;
+    color: #ffffff !important;
+  }
+
+  /* Override any remaining blue backgrounds */
+  [class*="bg-slate"],
+  [class*="bg-blue"],
+  [class*="bg-indigo"],
+  [class*="bg-purple"],
+  [class*="bg-1e1e2e"],
+  [class*="bg-2a2a3d"] {
+    background-color: #1a1a1a !important;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background-color: #151515 !important; }
+  ::-webkit-scrollbar-thumb { background-color: #2a2a2a !important; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background-color: #3a3a3a !important; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white hover:bg-gray-100
+           text-black text-sm font-semibold transition-all duration-200 shadow-lg
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white border text-sm font-medium transition-colors;
+    background-color: #1a1a1a;
+    border-color: #2a2a2a;
+  }
+  .btn-secondary:hover {
+    background-color: #2a2a2a;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-transparent text-gray-400 text-sm font-medium transition-colors border;
+    border-color: #2a2a2a;
+  }
+  .btn-ghost:hover {
+    background-color: #151515;
+    color: #ffffff;
+  }
+
+  .btn-disabled {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-gray-600 text-sm font-medium transition-colors opacity-50 cursor-not-allowed border;
+    background-color: #1a1a1a;
+    border-color: #2a2a2a;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-red-400 text-sm font-medium transition-colors border;
+    background-color: rgba(127, 29, 29, 0.2);
+    border-color: #7f1d1d;
+  }
+  .btn-danger:hover {
+    background-color: rgba(127, 29, 29, 0.3);
+  }
+
+  .input {
+    @apply w-full rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 transition-all border;
+    background-color: #151515;
+    border-color: #2a2a2a;
+    color: #ffffff;
+  }
+  .input:focus {
+    border-color: #d4af37;
+  }
+
+  .card {
+    @apply rounded-xl p-5 shadow-sm border;
+    background-color: #1a1a1a;
+    border-color: #2a2a2a;
+  }
+
+  .card-raised {
+    @apply rounded-xl p-5 shadow-md border;
+    background-color: #151515;
+    border-color: #2a2a2a;
+  }
+
+  .table-row-hover {
+    @apply transition-colors;
+  }
+  .table-row-hover:hover {
+    background-color: #151515;
+  }
+
+  .stat-card {
+    @apply rounded-lg p-4 shadow-sm border;
+    background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%) !important;
+    border-color: #2a2a2a !important;
+  }
+}
+
+@layer utilities {
+  /* Force all backgrounds to proper black/dark tones */
+  [class*="bg-surface"] {
+    background-color: #0a0a0a !important;
+  }
+
+  [class*="bg-surface-raised"] {
+    background-color: #151515 !important;
+  }
+
+  [class*="bg-surface-card"] {
+    background-color: #1a1a1a !important;
+  }
+
+  [class*="bg-surface-border"] {
+    background-color: #2a2a2a !important;
+  }
+
+  /* Main layout backgrounds */
+  aside, nav, main, section, article {
+    background-color: #0a0a0a !important;
+  }
+
+  /* Cards and panels */
+  [class*="rounded-lg"],
+  [class*="rounded-xl"] {
+    background-color: #1a1a1a !important;
+  }
+
+  /* Ensure text is white */
+  p, span, h1, h2, h3, h4, h5, h6, label, button, a {
+    color: inherit;
+  }
+}

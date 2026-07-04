@@ -1,0 +1,216 @@
+/* ============================================================================
+   Quill Rich Text Editor - Dark Theme Integration
+   ============================================================================ */
+
+.quill-editor-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background-color: transparent;
+}
+
+/* Remove all Quill default borders and styling */
+.quill-editor-container .ql-toolbar,
+.quill-editor-container .ql-container {
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+/* ── Toolbar ───────────────────────────────────────────────────────────── */
+.quill-editor-container .ql-toolbar {
+  background-color: transparent;
+  padding: 6px 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quill-editor-container .ql-toolbar.ql-snow {
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  padding: 6px 0;
+}
+
+/* Toolbar button containers */
+.quill-editor-container .ql-toolbar .ql-formats {
+  display: flex;
+  gap: 2px;
+  margin-right: 4px;
+  padding-right: 4px;
+}
+
+/* Toolbar buttons */
+.quill-editor-container .ql-toolbar button {
+  background: transparent;
+  border: none;
+  color: #999;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quill-editor-container .ql-toolbar button:hover {
+  background-color: rgba(0, 212, 255, 0.1);
+  color: #00d4ff;
+}
+
+.quill-editor-container .ql-toolbar button.ql-active {
+  background-color: rgba(0, 212, 255, 0.15);
+  color: #00d4ff;
+}
+
+/* Toolbar SVG icons */
+.quill-editor-container .ql-toolbar .ql-stroke {
+  stroke: currentColor;
+}
+
+.quill-editor-container .ql-toolbar .ql-fill {
+  fill: currentColor;
+}
+
+.quill-editor-container .ql-toolbar button:hover .ql-stroke,
+.quill-editor-container .ql-toolbar button.ql-active .ql-stroke {
+  stroke: #00d4ff;
+}
+
+.quill-editor-container .ql-toolbar button:hover .ql-fill,
+.quill-editor-container .ql-toolbar button.ql-active .ql-fill {
+  fill: #00d4ff;
+}
+
+/* ── Editor Container ──────────────────────────────────────────────────── */
+.quill-editor-container .ql-container {
+  flex: 1;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+}
+
+/* ── Editor Area ───────────────────────────────────────────────────────── */
+.quill-editor-container .ql-editor {
+  flex: 1;
+  background-color: transparent;
+  color: #e0e0e0;
+  padding: 8px 0;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-y: auto;
+  caret-color: #00d4ff;
+}
+
+/* Placeholder text */
+.quill-editor-container .ql-editor.ql-blank::before {
+  color: #666;
+  font-style: italic;
+  left: 0;
+}
+
+/* Focus state */
+.quill-editor-container .ql-editor:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* ── Content Formatting ────────────────────────────────────────────────── */
+
+/* Links */
+.quill-editor-container .ql-editor a {
+  color: #00d4ff;
+  text-decoration: underline;
+}
+
+/* Lists */
+.quill-editor-container .ql-editor ol,
+.quill-editor-container .ql-editor ul {
+  padding-left: 20px;
+  margin: 8px 0;
+  color: inherit;
+}
+
+.quill-editor-container .ql-editor li {
+  margin: 4px 0;
+}
+
+/* Blockquote */
+.quill-editor-container .ql-editor blockquote {
+  border-left: 3px solid #444;
+  margin: 8px 0;
+  padding-left: 12px;
+  color: #aaa;
+}
+
+/* Code */
+.quill-editor-container .ql-editor code {
+  background-color: rgba(0, 212, 255, 0.1);
+  color: #00d4ff;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+}
+
+/* Code block */
+.quill-editor-container .ql-editor pre {
+  background-color: #1a1a2e;
+  color: #00d4ff;
+  padding: 10px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 8px 0;
+  border-left: 3px solid #00d4ff;
+}
+
+.quill-editor-container .ql-editor pre.ql-syntax {
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+}
+
+/* ── Dropdown Menus ────────────────────────────────────────────────────── */
+.ql-picker-options {
+  background-color: #1a1a2e !important;
+  border: 1px solid #2d2d4d !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+.ql-picker-options .ql-picker-item {
+  color: #888 !important;
+  padding: 6px 12px !important;
+}
+
+.ql-picker-options .ql-picker-item:hover {
+  background-color: rgba(0, 212, 255, 0.15) !important;
+  color: #00d4ff !important;
+}
+
+.ql-picker-options .ql-picker-item.ql-selected {
+  background-color: rgba(0, 212, 255, 0.2) !important;
+  color: #00d4ff !important;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────── */
+.quill-editor-container .ql-editor::-webkit-scrollbar {
+  width: 6px;
+}
+
+.quill-editor-container .ql-editor::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.quill-editor-container .ql-editor::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+.quill-editor-container .ql-editor::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
