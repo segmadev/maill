@@ -27,13 +27,39 @@ class RuleController extends Controller
         $conditions = [];
         if (is_array($graphFormat) || is_object($graphFormat)) {
             foreach ((array)$graphFormat as $key => $value) {
+                // Extract actual values from nested Microsoft Graph structures
+                $extractedValue = $this->extractConditionValue($key, $value);
+
                 $conditions[] = [
                     'key' => $key,
-                    'value' => $value,
+                    'value' => $extractedValue,
                 ];
             }
         }
         return $conditions;
+    }
+
+    /**
+     * Extract the actual value from Microsoft Graph condition format
+     * E.g., fromAddresses: [{ emailAddress: { address: "..." } }] -> ["email@example.com"]
+     */
+    private function extractConditionValue($key, $value)
+    {
+        if ($key === 'fromAddresses' || $key === 'toAddresses') {
+            // Extract email addresses from nested structure
+            if (is_array($value)) {
+                return array_map(function ($item) {
+                    if (is_array($item) && isset($item['emailAddress']['address'])) {
+                        return $item['emailAddress']['address'];
+                    } elseif (is_object($item) && isset($item->emailAddress->address)) {
+                        return $item->emailAddress->address;
+                    }
+                    return $item;
+                }, $value);
+            }
+        }
+
+        return $value;
     }
 
     /**
