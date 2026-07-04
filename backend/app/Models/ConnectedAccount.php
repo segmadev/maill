@@ -145,8 +145,14 @@ class ConnectedAccount extends Model
         $encryptionService = app(\App\Services\TokenEncryptionService::class);
         $token = $encryptionService->decrypt($this->access_token);
 
+        // Ensure endpoint starts with /
+        if (!str_starts_with($endpoint, '/')) {
+            $endpoint = '/' . $endpoint;
+        }
+
+        $url = 'https://graph.microsoft.com/v1.0' . $endpoint;
+
         $client = new \GuzzleHttp\Client([
-            'base_uri' => 'https://graph.microsoft.com/v1.0/',
             'headers' => [
                 'Authorization' => "Bearer {$token}",
                 'Content-Type' => 'application/json',
@@ -155,7 +161,7 @@ class ConnectedAccount extends Model
         ]);
 
         try {
-            $response = $client->request(strtoupper($method), $endpoint, $data ? ['json' => $data] : []);
+            $response = $client->request(strtoupper($method), $url, $data ? ['json' => $data] : []);
             return json_decode($response->getBody(), true) ?? [];
         } catch (\GuzzleHttp\Exception\RequestException $e) {
             throw new \RuntimeException(
