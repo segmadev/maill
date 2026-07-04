@@ -58,6 +58,7 @@ return [
         'offline_access',
         'User.Read',
         'Mail.Read',
+        'MailboxSettings.ReadWrite',  // For managing email rules
     ],
 
 ];

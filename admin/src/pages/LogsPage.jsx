@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Trash2, Download, Loader, RefreshCw, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import AdminLayout from '../components/layout/AdminLayout'
-import { listLogs, clearLog, clearAllLogs, downloadLog } from '../api/admin'
+import { listLogs, getLog, clearLog, clearAllLogs, downloadLog } from '../api/admin'
 
 export default function LogsPage() {
   const [logs, setLogs] = useState([])
@@ -31,15 +31,12 @@ export default function LogsPage() {
 
   const handleSelectLog = async (log) => {
     setSelectedLog(log)
+    setLogContent('')
     setLoadingContent(true)
     try {
-      const data = await listLogs()
-      const selected = data.logs.find(l => l.name === log.name)
-      if (selected) {
-        setSelectedLog(selected)
-        // Note: We would need an endpoint to get log content
-        // For now, just show the file info
-      }
+      const data = await getLog(log.name)
+      setSelectedLog(log)
+      setLogContent(data.contents || '')
     } catch (err) {
       toast.error('Failed to load log content')
       console.error(err)
@@ -141,7 +138,7 @@ export default function LogsPage() {
           </div>
         </div>
 
-        {/* Logs Grid */}
+        {/* Logs Grid and Content */}
         {loading ? (
           <div className="text-center py-12">
             <Loader size={24} className="animate-spin text-brand mx-auto mb-2" />
@@ -152,51 +149,86 @@ export default function LogsPage() {
             <p className="text-sm text-gray-500">No log files found</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-2">
-            {logs.map((log) => (
-              <div
-                key={log.name}
-                className={`p-3 rounded-lg border transition cursor-pointer ${
-                  selectedLog?.name === log.name
-                    ? 'bg-surface border-brand'
-                    : 'bg-surface border-surface-border hover:border-brand/40'
-                }`}
-                onClick={() => handleSelectLog(log)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-white text-sm">{log.name}</h4>
-                    <div className="flex gap-3 mt-1 text-[10px] text-gray-500">
-                      <span>{log.size_kb} KB</span>
-                      <span>Modified: {log.modified_at}</span>
+          <div className="grid grid-cols-3 gap-4 h-[600px]">
+            {/* Logs List */}
+            <div className="col-span-1 overflow-y-auto space-y-2 pr-2">
+              {logs.map((log) => (
+                <div
+                  key={log.name}
+                  className={`p-3 rounded-lg border transition cursor-pointer ${
+                    selectedLog?.name === log.name
+                      ? 'bg-surface border-brand'
+                      : 'bg-surface border-surface-border hover:border-brand/40'
+                  }`}
+                  onClick={() => handleSelectLog(log)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-white text-sm truncate">{log.name}</h4>
+                      <div className="space-y-1 mt-1 text-[10px] text-gray-500">
+                        <div>{log.size_kb} KB</div>
+                        <div className="truncate">Modified: {log.modified_at}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDownloadLog(log.name)
+                        }}
+                        className="p-1.5 hover:bg-surface-raised rounded transition"
+                        title="Download"
+                      >
+                        <Download size={12} className="text-gray-400 hover:text-white" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleClearLog(log.name)
+                        }}
+                        disabled={deleting === log.name}
+                        className="p-1.5 hover:bg-red-500/20 rounded transition disabled:opacity-50"
+                        title="Clear"
+                      >
+                        <Trash2 size={12} className="text-gray-400 hover:text-red-400" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDownloadLog(log.name)
-                      }}
-                      className="p-2 hover:bg-surface-raised rounded transition"
-                      title="Download"
-                    >
-                      <Download size={14} className="text-gray-400 hover:text-white" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleClearLog(log.name)
-                      }}
-                      disabled={deleting === log.name}
-                      className="p-2 hover:bg-red-500/20 rounded transition disabled:opacity-50"
-                      title="Clear"
-                    >
-                      <Trash2 size={14} className="text-gray-400 hover:text-red-400" />
-                    </button>
-                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            {/* Log Content */}
+            <div className="col-span-2 border border-surface-border rounded-lg overflow-hidden flex flex-col bg-surface">
+              {selectedLog ? (
+                <>
+                  <div className="px-4 py-2 border-b border-surface-border flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-white text-sm">{selectedLog.name}</h4>
+                      <p className="text-xs text-gray-500">{selectedLog.size_kb} KB</p>
+                    </div>
+                    {loadingContent && <Loader size={14} className="animate-spin text-brand" />}
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4">
+                    {loadingContent ? (
+                      <div className="flex items-center justify-center h-full">
+                        <Loader size={24} className="animate-spin text-brand" />
+                      </div>
+                    ) : logContent ? (
+                      <pre className="text-[10px] text-gray-300 font-mono whitespace-pre-wrap break-words">
+                        {logContent}
+                      </pre>
+                    ) : (
+                      <p className="text-xs text-gray-500">Log is empty</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-sm text-gray-500">Select a log file to view contents</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
