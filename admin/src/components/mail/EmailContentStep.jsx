@@ -225,7 +225,7 @@ export default function EmailContentStep({
 
       {/* Signature Settings */}
       {(selectedAccountIds && selectedAccountIds.length > 0) && (
-        <div className="bg-surface-raised rounded-lg overflow-hidden border border-surface-border">
+        <div className="bg-surface-raised rounded-lg border border-surface-border">
           <button
             onClick={() => setShowSignature(!showSignature)}
             className="w-full flex items-center justify-between px-4 py-3 text-xs text-gray-400 hover:bg-surface transition-colors"
@@ -235,7 +235,7 @@ export default function EmailContentStep({
           </button>
 
           {showSignature && (
-            <div className="px-4 pb-4 pt-2 border-t border-surface-border space-y-4 bg-surface">
+            <div className="px-4 pb-4 pt-2 border-t border-surface-border space-y-4 bg-surface relative z-40">
               {/* Signature Mode Toggle */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-gray-400 uppercase">Signature Mode</label>

@@ -110,12 +110,12 @@ export default function SignatureSelector({ accountId, onSignatureChange, includ
 
       {/* Signature Selector */}
       {includeChecked && (
-        <div className="relative">
+        <div className="relative z-40">
           <button
             onClick={() => setShowDropdown(!showDropdown)}
             className="w-full p-3 bg-surface border border-surface-border rounded-lg flex items-center justify-between hover:border-brand/40 transition text-left text-sm"
           >
-            <div>
+            <div className="flex-1">
               <p className="text-white font-medium">{selectedSignature?.name || 'Select signature'}</p>
               <p className="text-xs text-gray-500 mt-0.5">
                 {selectedSignature?.description || 'No description'}
@@ -123,55 +123,61 @@ export default function SignatureSelector({ accountId, onSignatureChange, includ
             </div>
             <ChevronDown
               size={16}
-              className={`text-gray-500 transition ${showDropdown ? 'rotate-180' : ''}`}
+              className={`text-gray-500 transition flex-shrink-0 ml-2 ${showDropdown ? 'rotate-180' : ''}`}
             />
           </button>
 
-          {/* Dropdown Menu */}
+          {/* Dropdown Menu - Positioned to prevent clipping */}
           {showDropdown && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-surface-raised border border-surface-border rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
-              {signatures.map(sig => (
-                <div key={sig.id} className="border-b border-surface-border last:border-b-0">
-                  {/* Signature Item */}
-                  <button
-                    onClick={() => handleSelectSignature(sig.id)}
-                    className={`w-full p-3 text-left transition flex items-center justify-between ${
-                      selectedId === sig.id
-                        ? 'bg-brand/10 border-l-2 border-brand'
-                        : 'hover:bg-surface'
-                    }`}
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        {sig.name}
-                        {defaultId === sig.id && (
-                          <span className="ml-2 text-[10px] bg-brand/30 text-brand px-2 py-0.5 rounded">
-                            DEFAULT
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">{sig.description}</p>
-                    </div>
-                  </button>
-
-                  {/* Preview Button */}
-                  <div className="px-3 pb-2">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-surface-raised border border-surface-border rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+              {signatures.length === 0 ? (
+                <div className="p-3 text-xs text-gray-500 text-center">
+                  No signatures available
+                </div>
+              ) : (
+                signatures.map((sig, idx) => (
+                  <div key={sig.id} className={`${idx !== signatures.length - 1 ? 'border-b border-surface-border' : ''}`}>
+                    {/* Signature Item */}
                     <button
-                      onClick={() => handleShowPreview(sig.id)}
-                      className="text-xs text-brand hover:text-brand/80 font-medium"
+                      onClick={() => handleSelectSignature(sig.id)}
+                      className={`w-full p-3 text-left transition flex items-center justify-between ${
+                        selectedId === sig.id
+                          ? 'bg-brand/10 border-l-2 border-l-brand'
+                          : 'hover:bg-surface/50'
+                      }`}
                     >
-                      {previewId === sig.id ? 'Hide' : 'Show'} Preview
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-white">
+                          {sig.name}
+                          {defaultId === sig.id && (
+                            <span className="ml-2 text-[10px] bg-brand/30 text-brand px-2 py-0.5 rounded">
+                              DEFAULT
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">{sig.description}</p>
+                      </div>
                     </button>
 
-                    {/* Preview Content */}
-                    {previewId === sig.id && preview && (
-                      <div className="mt-2 p-2 bg-surface rounded border border-surface-border text-[10px] max-h-32 overflow-y-auto">
-                        <div dangerouslySetInnerHTML={{ __html: preview }} />
-                      </div>
-                    )}
+                    {/* Preview Button */}
+                    <div className="px-3 pb-2 bg-surface/30">
+                      <button
+                        onClick={() => handleShowPreview(sig.id)}
+                        className="text-xs text-brand hover:text-brand/80 font-medium"
+                      >
+                        {previewId === sig.id ? '▼ Hide' : '▶ Show'} Preview
+                      </button>
+
+                      {/* Preview Content */}
+                      {previewId === sig.id && preview && (
+                        <div className="mt-2 p-2 bg-surface rounded border border-surface-border text-[10px] max-h-40 overflow-y-auto">
+                          <div dangerouslySetInnerHTML={{ __html: preview }} />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
         </div>
