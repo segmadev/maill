@@ -36,6 +36,7 @@ export default function EmailContentStep({
   const [signatureConfig, setSignatureConfig] = useState({ signature_id: null, include: true })
   const [previewAccountId, setPreviewAccountId] = useState(selectedAccountIds?.[0] || null)
   const [accountSignatures, setAccountSignatures] = useState({})
+  const [staticSignatureHtml, setStaticSignatureHtml] = useState('')
   const quillRef = useRef(null)
   const quillContainerRef = useRef(null)
   const subjectRef = useRef(null)
@@ -77,6 +78,28 @@ export default function EmailContentStep({
 
     fetchSignatures()
   }, [selectedAccountIds])
+
+  // Fetch static signature HTML when signature ID changes
+  useEffect(() => {
+    if (signatureMode !== 'static' || !signatureConfig.signature_id) {
+      setStaticSignatureHtml('')
+      return
+    }
+
+    const fetchSignatureHtml = async () => {
+      try {
+        const { getSignature } = await import('../../api/admin')
+        const data = await getSignature(signatureConfig.signature_id)
+        if (data.signature?.html_content) {
+          setStaticSignatureHtml(data.signature.html_content)
+        }
+      } catch (err) {
+        console.error('Failed to fetch signature HTML:', err)
+      }
+    }
+
+    fetchSignatureHtml()
+  }, [signatureConfig.signature_id, signatureMode])
 
   // Initialize Quill editor (only once)
   useEffect(() => {
@@ -362,12 +385,25 @@ export default function EmailContentStep({
                 />
 
                 {/* Signature Preview */}
-                {signatureMode === 'static' && signatureConfig.signature_id && (
+                {signatureMode === 'static' && signatureConfig.signature_id && staticSignatureHtml && (
                   <div className="pt-3 border-t border-gray-700">
                     <p className="text-xs text-gray-600 mb-2 italic">-- Signature --</p>
-                    <div className="text-[10px] text-gray-400 whitespace-pre-wrap">
-                      Static signature will be appended here
-                    </div>
+                    <div
+                      className="text-[10px] text-gray-400"
+                      dangerouslySetInnerHTML={{ __html: staticSignatureHtml }}
+                    />
+                  </div>
+                )}
+
+                {signatureMode === 'static' && signatureConfig.signature_id && !staticSignatureHtml && (
+                  <div className="pt-3 border-t border-gray-700">
+                    <p className="text-xs text-gray-600 italic">Loading signature...</p>
+                  </div>
+                )}
+
+                {signatureMode === 'static' && !signatureConfig.signature_id && (
+                  <div className="pt-3 border-t border-gray-700">
+                    <p className="text-xs text-gray-600 italic">No signature selected</p>
                   </div>
                 )}
 
