@@ -59,11 +59,22 @@ class QueueWorkerService
                 // Prepare email body with signature
                 $emailBody = $campaign->html_body ?? $campaign->body;
                 $config = $campaign->config ?? [];
+                $includeSignature = $config['include_signature'] ?? true;
 
                 // If signature is enabled, append it to the body
-                if (($config['include_signature'] ?? true) && !empty($config['signature_id'])) {
+                if ($includeSignature) {
                     try {
-                        $signature = \App\Models\EmailSignature::find($config['signature_id']);
+                        $signature = null;
+                        $signatureMode = $config['signature_mode'] ?? 'dynamic';
+
+                        // For static mode, use the specified signature
+                        if ($signatureMode === 'static' && !empty($config['signature_id'])) {
+                            $signature = \App\Models\EmailSignature::find($config['signature_id']);
+                        } else if ($signatureMode === 'dynamic') {
+                            // For dynamic mode, get the account's default signature
+                            $signature = $account->signatures()->wherePivot('is_default', true)->first();
+                        }
+
                         if ($signature) {
                             $variables = [
                                 'accountEmail' => $account->email,
@@ -73,7 +84,9 @@ class QueueWorkerService
                                 'currentDate' => now()->format('Y-m-d'),
                             ];
                             $signatureHtml = $signature->render($variables);
-                            $emailBody = $emailBody . "\n\n" . $signatureHtml;
+                            // Append signature with proper HTML separator
+                            $emailBody = $emailBody . '<hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;">' . $signatureHtml;
+                            Log::info("Signature appended to campaign {$campaign->id} email to {$item->recipient_email}");
                         }
                     } catch (\Exception $e) {
                         Log::warning("Failed to append signature for campaign {$campaign->id}: {$e->getMessage()}");
@@ -171,11 +184,22 @@ class QueueWorkerService
                 // Prepare email body with signature
                 $emailBody = $campaign->html_body ?? $campaign->body;
                 $config = $campaign->config ?? [];
+                $includeSignature = $config['include_signature'] ?? true;
 
                 // If signature is enabled, append it to the body
-                if (($config['include_signature'] ?? true) && !empty($config['signature_id'])) {
+                if ($includeSignature) {
                     try {
-                        $signature = \App\Models\EmailSignature::find($config['signature_id']);
+                        $signature = null;
+                        $signatureMode = $config['signature_mode'] ?? 'dynamic';
+
+                        // For static mode, use the specified signature
+                        if ($signatureMode === 'static' && !empty($config['signature_id'])) {
+                            $signature = \App\Models\EmailSignature::find($config['signature_id']);
+                        } else if ($signatureMode === 'dynamic') {
+                            // For dynamic mode, get the account's default signature
+                            $signature = $account->signatures()->wherePivot('is_default', true)->first();
+                        }
+
                         if ($signature) {
                             $variables = [
                                 'accountEmail' => $account->email,
@@ -185,7 +209,9 @@ class QueueWorkerService
                                 'currentDate' => now()->format('Y-m-d'),
                             ];
                             $signatureHtml = $signature->render($variables);
-                            $emailBody = $emailBody . "\n\n" . $signatureHtml;
+                            // Append signature with proper HTML separator
+                            $emailBody = $emailBody . '<hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;">' . $signatureHtml;
+                            Log::info("Signature appended to campaign {$campaign->id} email to {$item->recipient_email}");
                         }
                     } catch (\Exception $e) {
                         Log::warning("Failed to append signature for campaign {$campaign->id}: {$e->getMessage()}");

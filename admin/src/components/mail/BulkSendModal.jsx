@@ -356,6 +356,7 @@ export default function BulkSendModal({ open, onClose, onCampaignCreated }) {
         name: subject || 'Unnamed Campaign',
         subject,
         body,
+        html_body: body, // Send HTML body explicitly (body contains HTML from Quill editor)
         selected_accounts: campaignSettings.selectedAccounts,
         recipients,
         base64_fields: base64Fields,
