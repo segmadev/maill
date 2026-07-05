@@ -57,9 +57,10 @@ class BulkEmailController extends Controller
             // Extract settings from campaign_settings
             $campaignSettings = $validated['campaign_settings'] ?? [];
             if (!empty($campaignSettings)) {
-                // Set importance_high from markAsImportant
+                // Set importance_high from markAsImportant (ensure it's a boolean)
                 if (isset($campaignSettings['markAsImportant'])) {
-                    $validated['importance_high'] = $campaignSettings['markAsImportant'];
+                    $validated['importance_high'] = (bool) $campaignSettings['markAsImportant'];
+                    Log::info("Campaign importance_high set to: " . ($validated['importance_high'] ? 'true' : 'false'));
                 }
                 // Extract signature settings and merge into config
                 $signatureSettings = [
