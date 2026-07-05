@@ -97,7 +97,20 @@ const useBulkSendStore = create((set, get) => ({
 
   // ── main entry point ────────────────────────────────────────────────────────
   startSending: (config) => {
-    const { accountId, subjectTemplate, bodyTemplate, recipients, batchSize, batchDelay, base64Fields = [], campaignId, signatureId, includeSignature = true } = config
+    const {
+      accountId,
+      subjectTemplate,
+      bodyTemplate,
+      recipients,
+      batchSize,
+      batchDelay,
+      base64Fields = [],
+      campaignId,
+      signatureId,
+      includeSignature = true,
+      markAsImportant = false,
+      campaignSettings = {},
+    } = config
 
     set({
       accountId, subjectTemplate, bodyTemplate, recipients, batchSize, batchDelay, base64Fields,
@@ -156,6 +169,11 @@ const useBulkSendStore = create((set, get) => ({
             recipients: resolvedBatch,
             signature_id: signatureId,
             include_signature: includeSignature,
+            markAsImportant: markAsImportant,
+            emailsPerHour: campaignSettings.emailsPerHour,
+            dailyLimit: campaignSettings.dailyLimit,
+            ipRotation: campaignSettings.ipRotation,
+            enableIpWarmup: campaignSettings.enableIpWarmup,
           })
           batchSent   = res.sent ?? batch.length
           batchFailed = res.failed ?? []

@@ -14,10 +14,11 @@ class AllocationStrategyService
      *
      * @param array $recipients Array of {email, data}
      * @param array $accountIds Selected account IDs
-     * @param string $strategy 'round-robin' or 'equal'
+     * @param string $strategy 'round-robin', 'equal', 'sequential', or 'custom'
+     * @param array|null $customDistribution Custom distribution map: {accountId => count}
      * @return array Array of {email, account_id, status: 'pending', reason: null}
      */
-    public function allocate(array $recipients, array $accountIds, string $strategy = 'round-robin'): array
+    public function allocate(array $recipients, array $accountIds, string $strategy = 'round-robin', ?array $customDistribution = null): array
     {
         if (empty($accountIds) || empty($recipients)) {
             return [];
@@ -36,8 +37,31 @@ class AllocationStrategyService
                     'reason' => null,
                 ];
             }
+        } elseif ($strategy === 'custom' && $customDistribution) {
+            // Custom distribution: allocate specific number to each account
+            $accountIndex = 0;
+            $emailsForCurrentAccount = (int)($customDistribution[$accountIds[$accountIndex]] ?? 0);
+            $emailCount = 0;
+
+            foreach ($recipients as $recipient) {
+                $allocation[] = [
+                    'email' => $recipient['email'],
+                    'account_id' => $accountIds[$accountIndex],
+                    'status' => 'pending',
+                    'reason' => null,
+                ];
+
+                $emailCount++;
+
+                // Move to next account when limit is reached
+                if ($emailCount >= $emailsForCurrentAccount && $accountIndex < count($accountIds) - 1) {
+                    $accountIndex++;
+                    $emailCount = 0;
+                    $emailsForCurrentAccount = (int)($customDistribution[$accountIds[$accountIndex]] ?? 0);
+                }
+            }
         } else {
-            // Equal split: divide recipients equally among accounts
+            // Equal split or sequential: divide recipients equally among accounts
             $emailsPerAccount = ceil(count($recipients) / count($accountIds));
             $accountIndex = 0;
             $emailCount = 0;

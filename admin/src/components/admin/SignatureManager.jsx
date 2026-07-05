@@ -21,6 +21,7 @@ import {
   getAccounts,
   getAccountSignatures,
   assignSignatureToAccount,
+  unassignSignatureFromAccount,
 } from '../../api/admin'
 import SignatureEditor from './SignatureEditor'
 
@@ -36,6 +37,7 @@ export default function SignatureManager() {
   const [selectedAccount, setSelectedAccount] = useState(null)
   const [accountSignatures, setAccountSignatures] = useState([])
   const [assigningSignature, setAssigningSignature] = useState(null)
+  const [unassigningSignature, setUnassigningSignature] = useState(null)
 
   useEffect(() => {
     loadData()
@@ -118,6 +120,22 @@ export default function SignatureManager() {
       console.error(err)
     } finally {
       setAssigningSignature(null)
+    }
+  }
+
+  const handleUnassignSignature = async (signatureId) => {
+    if (!selectedAccount) return
+
+    setUnassigningSignature(signatureId)
+    try {
+      await unassignSignatureFromAccount(selectedAccount.id, signatureId)
+      await loadAccountSignatures(selectedAccount.id)
+      toast.success('Signature unassigned')
+    } catch (err) {
+      toast.error('Failed to unassign signature')
+      console.error(err)
+    } finally {
+      setUnassigningSignature(null)
     }
   }
 
@@ -348,7 +366,7 @@ export default function SignatureManager() {
                       key={sig.id}
                       className="p-2 bg-surface rounded border border-surface-border flex items-center justify-between"
                     >
-                      <div>
+                      <div className="flex-1">
                         <p className="text-sm font-medium text-white">{sig.name}</p>
                         <p className="text-xs text-gray-500">{sig.description}</p>
                       </div>
@@ -358,6 +376,13 @@ export default function SignatureManager() {
                             DEFAULT
                           </span>
                         )}
+                        <button
+                          onClick={() => handleUnassignSignature(sig.id)}
+                          disabled={unassigningSignature === sig.id}
+                          className="ml-2 px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded font-medium hover:bg-red-500/30 transition disabled:opacity-50"
+                        >
+                          {unassigningSignature === sig.id ? 'Unassigning...' : 'Unassign'}
+                        </button>
                       </div>
                     </div>
                   ))}

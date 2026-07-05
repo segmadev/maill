@@ -6,7 +6,6 @@
  */
 import { useState, useMemo, useEffect } from 'react'
 import { ChevronDown, AlertTriangle, CheckCircle2, Zap } from 'lucide-react'
-import SignatureSelector from '../admin/SignatureSelector'
 
 const BATCH_SIZES = [5, 10, 20, 50, 100]
 const BATCH_DELAYS = [
@@ -39,15 +38,12 @@ export default function SendingSettingsStep({
 }) {
   const [showBatchSettings, setShowBatchSettings] = useState(true)
   const [showCampaignSettings, setShowCampaignSettings] = useState(true)
-  const [showSignatureSettings, setShowSignatureSettings] = useState(true)
   const [autoAdjustments, setAutoAdjustments] = useState([])
   const [showAutoAdjustInfo, setShowAutoAdjustInfo] = useState(false)
 
   const [markAsImportant, setMarkAsImportant] = useState(false)
   const [ipRotation, setIpRotation] = useState('reputation')
   const [enableIpWarmup, setEnableIpWarmup] = useState(false)
-  const [signatureMode, setSignatureMode] = useState('dynamic') // 'dynamic' or 'static'
-  const [signatureConfig, setSignatureConfig] = useState({ signature_id: null, include: true })
 
   // Range settings for random behavior
   const [batchSizeRange, setBatchSizeRange] = useState({ min: 5, max: 10 })
@@ -143,9 +139,6 @@ export default function SendingSettingsStep({
       batchDelayRange,
       emailsPerHourRange,
       dailyLimitRange,
-      signature_mode: signatureMode,
-      signature_id: signatureMode === 'static' ? signatureConfig.signature_id : null,
-      include_signature: signatureMode === 'static' ? signatureConfig.include : true,
     }
     onNext()
   }
@@ -375,87 +368,6 @@ export default function SendingSettingsStep({
           </div>
         )}
       </div>
-
-      {/* Signature Settings */}
-      {selectedAccountIds.length > 0 && (
-        <div className="bg-surface-raised rounded-lg overflow-hidden border border-surface-border">
-          <button
-            onClick={() => setShowSignatureSettings(!showSignatureSettings)}
-            className="w-full flex items-center justify-between px-4 py-3 text-xs text-gray-400 hover:bg-surface transition-colors"
-          >
-            <span className="font-semibold">Email Signature</span>
-            <ChevronDown size={12} className={`transition-transform ${showSignatureSettings ? 'rotate-180' : ''}`} />
-          </button>
-
-          {showSignatureSettings && (
-            <div className="px-4 pb-4 pt-2 border-t border-surface-border space-y-4 bg-surface">
-              {/* Signature Mode Toggle */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-400 uppercase">Signature Mode</label>
-                <div className="flex gap-2">
-                  <label className="flex items-center gap-2 flex-1 p-2 rounded border border-surface-border cursor-pointer hover:bg-surface-raised transition" style={{borderColor: signatureMode === 'dynamic' ? '#10b981' : 'inherit'}}>
-                    <input
-                      type="radio"
-                      name="signature_mode"
-                      value="dynamic"
-                      checked={signatureMode === 'dynamic'}
-                      onChange={e => setSignatureMode(e.target.value)}
-                    />
-                    <div>
-                      <p className="text-xs font-medium text-white">Dynamic</p>
-                      <p className="text-[10px] text-gray-500">Each account uses its own signature</p>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center gap-2 flex-1 p-2 rounded border border-surface-border cursor-pointer hover:bg-surface-raised transition" style={{borderColor: signatureMode === 'static' ? '#10b981' : 'inherit'}}>
-                    <input
-                      type="radio"
-                      name="signature_mode"
-                      value="static"
-                      checked={signatureMode === 'static'}
-                      onChange={e => setSignatureMode(e.target.value)}
-                    />
-                    <div>
-                      <p className="text-xs font-medium text-white">Static</p>
-                      <p className="text-[10px] text-gray-500">Use same signature for all</p>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              {/* Static Mode: Signature Selector */}
-              {signatureMode === 'static' && (
-                <div className="space-y-2 border-t border-surface-border pt-3">
-                  <label className="text-xs font-semibold text-gray-400 uppercase">Select Signature</label>
-                  {selectedAccountIds && selectedAccountIds[0] ? (
-                    <>
-                      <SignatureSelector
-                        accountId={selectedAccountIds[0]}
-                        onSignatureChange={setSignatureConfig}
-                        includeSignature={signatureConfig.include}
-                      />
-                      <p className="text-[10px] text-gray-600">
-                        This signature will be used for all accounts in the campaign.
-                      </p>
-                    </>
-                  ) : (
-                    <div className="p-2 bg-red-500/10 rounded border border-red-500/30 text-[10px] text-red-300">
-                      ⚠️ No account selected. Please go back and select an account first.
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Dynamic Mode: Info */}
-              {signatureMode === 'dynamic' && (
-                <div className="p-2 bg-blue-500/10 rounded border border-blue-500/30 text-[10px] text-blue-300">
-                  ℹ️ Each account will automatically use its assigned default signature when sending emails.
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Summary */}
       <div className="rounded-lg p-3 space-y-2 border bg-surface border-surface-border">

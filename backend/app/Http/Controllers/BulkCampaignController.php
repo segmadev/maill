@@ -217,11 +217,13 @@ class BulkCampaignController extends Controller
             if (empty($campaign->recipient_tracking)) {
                 $allocationService = new \App\Services\AllocationStrategyService();
                 $strategy = $campaign->campaign_settings['allocationStrategy'] ?? 'round-robin';
+                $customDistribution = $campaign->campaign_settings['customDistribution'] ?? null;
 
                 $tracking = $allocationService->allocate(
                     $campaign->recipients,
                     $campaign->selected_accounts,
-                    $strategy
+                    $strategy,
+                    $customDistribution
                 );
 
                 $campaign->update(['recipient_tracking' => $tracking]);

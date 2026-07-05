@@ -174,6 +174,8 @@ export default function BulkSendPage() {
           campaignId: campaign.id,
           signatureId: campaignData.campaign_settings?.signature_id,
           includeSignature: campaignData.campaign_settings?.include_signature ?? true,
+          markAsImportant: campaignData.campaign_settings?.markAsImportant ?? false,
+          campaignSettings: campaignData.campaign_settings || {},
         })
 
         // Wait for this account to finish before starting next

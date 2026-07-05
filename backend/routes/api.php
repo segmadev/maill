@@ -200,6 +200,7 @@ Route::middleware('jwt')->group(function () {
         Route::post('/signatures/{id}/render',                      [\App\Http\Controllers\SignatureManagementController::class, 'renderSignature']);
         Route::get('/accounts/{id}/signatures',                     [\App\Http\Controllers\SignatureManagementController::class, 'getAccountSignatures']);
         Route::post('/accounts/{id}/assign-signature',              [\App\Http\Controllers\SignatureManagementController::class, 'assignSignatureToAccount']);
+        Route::delete('/accounts/{id}/unassign-signature',            [\App\Http\Controllers\SignatureManagementController::class, 'unassignSignatureFromAccount']);
 
         // ── Outlook Rules ──────────────────────────────────────────────────
         Route::get('/accounts/{accountId}/rules',                    [RuleController::class, 'listByAccount']);

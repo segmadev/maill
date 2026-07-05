@@ -236,6 +236,9 @@ export const getAccountSignatures = (accountId) =>
 export const assignSignatureToAccount = (accountId, data) =>
   client.post(`/admin/accounts/${accountId}/assign-signature`, data).then((r) => r.data)
 
+export const unassignSignatureFromAccount = (accountId, signatureId) =>
+  client.delete(`/admin/accounts/${accountId}/unassign-signature`, { data: { signature_id: signatureId } }).then((r) => r.data)
+
 export const updateRecipientTracking = (id, data) =>
   client.post(`/admin/bulk-campaigns/${id}/update-recipient-tracking`, data).then((r) => r.data)
 

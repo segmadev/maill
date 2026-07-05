@@ -232,6 +232,10 @@ export default function BulkSendModal({ open, onClose, onCampaignCreated }) {
     enableIpWarmup: false,
     selectedAccounts: [null],
     allocationStrategy: 'round-robin',
+    customDistribution: null,
+    signature_mode: 'dynamic',
+    signature_id: null,
+    include_signature: true,
   })
 
   // Step-4 UI state (Progress)
@@ -286,6 +290,10 @@ export default function BulkSendModal({ open, onClose, onCampaignCreated }) {
       enableIpWarmup: false,
       selectedAccounts: [defaultAccountId],
       allocationStrategy: 'round-robin',
+      customDistribution: null,
+      signature_mode: 'dynamic',
+      signature_id: null,
+      include_signature: true,
     })
   }
 
@@ -315,6 +323,7 @@ export default function BulkSendModal({ open, onClose, onCampaignCreated }) {
         ...prev,
         selectedAccounts: window.__accountSelection.selectedAccounts,
         allocationStrategy: window.__accountSelection.allocationStrategy,
+        customDistribution: window.__accountSelection.customDistribution || null,
       }))
     }
     // Extract campaign settings from window object when moving from settings (step 4)
@@ -433,10 +442,13 @@ export default function BulkSendModal({ open, onClose, onCampaignCreated }) {
               window.__accountSelection = {
                 selectedAccounts: [accountId],
                 allocationStrategy: 'round-robin',
+                customDistribution: null,
               }
             }
           }}
           previousSelection={campaignSettings.selectedAccounts}
+          previousAllocationStrategy={campaignSettings.allocationStrategy}
+          previousCustomDistribution={campaignSettings.customDistribution}
         />
       )}
 
@@ -452,7 +464,19 @@ export default function BulkSendModal({ open, onClose, onCampaignCreated }) {
           body={body}
           setBody={setBody}
           onBack={() => handlePreviousStep(3)}
-          onNext={() => handleNextStep(3)}
+          onNext={() => {
+            handleNextStep(3)
+            // Extract signature config from window
+            if (window.__emailSignatureConfig) {
+              setCampaignSettings(prev => ({
+                ...prev,
+                signature_mode: window.__emailSignatureConfig.signature_mode,
+                signature_id: window.__emailSignatureConfig.signature_id,
+                include_signature: window.__emailSignatureConfig.include_signature,
+              }))
+            }
+          }}
+          selectedAccountIds={campaignSettings.selectedAccounts || []}
         />
       )}
 
@@ -516,7 +540,9 @@ export default function BulkSendModal({ open, onClose, onCampaignCreated }) {
                 <div className="space-y-1">
                   {campaignSettings.selectedAccounts.map(accId => {
                     const account = accounts.find(a => a.id === accId)
-                    const emailsPerAccount = Math.ceil(recipients.length / campaignSettings.selectedAccounts.length)
+                    const emailsPerAccount = campaignSettings.customDistribution && campaignSettings.customDistribution[accId]
+                      ? parseInt(campaignSettings.customDistribution[accId])
+                      : Math.ceil(recipients.length / campaignSettings.selectedAccounts.length)
                     return (
                       <div key={accId} className="flex items-center justify-between text-xs p-2 bg-surface rounded">
                         <span className="text-gray-400 truncate">{account?.email}</span>

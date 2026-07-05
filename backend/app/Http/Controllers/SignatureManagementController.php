@@ -205,6 +205,38 @@ class SignatureManagementController extends Controller
     }
 
     /**
+     * DELETE /api/admin/accounts/{id}/unassign-signature
+     * Unassign signature from account
+     */
+    public function unassignSignatureFromAccount(Request $request, int $id): JsonResponse
+    {
+        $account = ConnectedAccount::find($id);
+
+        if (!$account) {
+            return response()->json(['error' => 'Account not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'signature_id' => 'required|exists:email_signatures,id',
+        ]);
+
+        try {
+            $account->signatures()->detach($validated['signature_id']);
+
+            return response()->json([
+                'message' => 'Signature unassigned from account',
+                'signatures' => $account->signatures,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to unassign signature: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'unassign_failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
      * GET /api/admin/accounts/{id}/signatures
      * Get signatures assigned to an account
      */

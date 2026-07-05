@@ -18,6 +18,8 @@ export default function AccountSelectionStep({
   onBack,
   onNext,
   previousSelection = null,
+  previousCustomDistribution = null,
+  previousAllocationStrategy = 'round-robin',
 }) {
   const [searchQuery, setSearchQuery] = useState('')
   // Use previousSelection if available (when going back), otherwise use accountId
@@ -26,7 +28,8 @@ export default function AccountSelectionStep({
       ? previousSelection
       : [accountId]
   )
-  const [allocationStrategy, setAllocationStrategy] = useState('round-robin')
+  const [allocationStrategy, setAllocationStrategy] = useState(previousAllocationStrategy)
+  const [customDistribution, setCustomDistribution] = useState(previousCustomDistribution || {})
   const [filterType, setFilterType] = useState('all') // 'all', 'oauth', 'smtp'
   const [isReloading, setIsReloading] = useState(false)
   const { setAccounts } = useMailStore()
@@ -82,10 +85,33 @@ export default function AccountSelectionStep({
       toast.error('Select at least one account')
       return
     }
+
+    // Validate custom distribution if selected
+    if (allocationStrategy === 'custom') {
+      let totalEmails = 0
+      for (const accId of selectedAccounts) {
+        const customCount = parseInt(customDistribution[accId] || 0)
+        if (customCount <= 0) {
+          toast.error('All accounts must have a number greater than 0 for custom distribution')
+          return
+        }
+        totalEmails += customCount
+      }
+      if (totalEmails === 0) {
+        toast.error('Total emails must be greater than 0')
+        return
+      }
+      if (totalEmails > recipients.length) {
+        toast.error(`Total custom distribution (${totalEmails}) cannot exceed total recipients (${recipients.length})`)
+        return
+      }
+    }
+
     // Store selection in window for next steps
     window.__accountSelection = {
       selectedAccounts,
       allocationStrategy,
+      customDistribution: allocationStrategy === 'custom' ? customDistribution : null,
     }
     onNext()
   }
@@ -263,11 +289,12 @@ export default function AccountSelectionStep({
       {selectedAccounts.length > 1 && (
         <div className="bg-surface-raised rounded-lg p-4 border border-brand/20 space-y-3">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Distribution Formula</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {[
               { value: 'round-robin', label: '⚖️ Round Robin', desc: 'Alternate' },
               { value: 'equal', label: '📊 Equal', desc: 'Divide equally' },
               { value: 'sequential', label: '→ Sequential', desc: 'Fill accounts' },
+              { value: 'custom', label: '✏️ Custom', desc: 'Set per account' },
             ].map(strategy => (
               <label
                 key={strategy.value}
@@ -291,22 +318,81 @@ export default function AccountSelectionStep({
             ))}
           </div>
 
-          {/* Distribution Preview */}
-          <div className="pt-3 border-t border-surface-border space-y-2">
-            <p className="text-[10px] text-gray-600">Estimated distribution:</p>
-            <div className="space-y-1 max-h-24 overflow-y-auto">
-              {selectedAccounts.map(id => {
-                const account = accounts.find(a => a.id === id)
-                const perAccount = Math.ceil(recipients.length / selectedAccounts.length)
-                return (
-                  <div key={id} className="flex items-center justify-between text-[10px] p-2 bg-surface rounded">
-                    <span className="text-gray-400 truncate">{account?.email}</span>
-                    <span className="text-brand font-medium">{perAccount}</span>
+          {/* Custom Distribution Inputs */}
+          {allocationStrategy === 'custom' && (
+            <div className="pt-3 border-t border-surface-border space-y-2">
+              <p className="text-[10px] text-gray-600">Emails per account:</p>
+              <div className="space-y-2">
+                {selectedAccounts.map(id => {
+                  const account = accounts.find(a => a.id === id)
+                  const totalAssigned = Object.values(customDistribution).reduce((sum, v) => sum + (parseInt(v) || 0), 0)
+                  const remaining = recipients.length - totalAssigned
+                  return (
+                    <div key={id} className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 flex-1 truncate">{account?.email}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max={recipients.length}
+                        value={customDistribution[id] || ''}
+                        onChange={e => setCustomDistribution({
+                          ...customDistribution,
+                          [id]: e.target.value
+                        })}
+                        placeholder="0"
+                        className="w-20 px-2 py-1 bg-surface border border-surface-border rounded text-xs text-white text-center focus:outline-none focus:border-brand"
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Distribution Summary */}
+              <div className="pt-2 border-t border-surface-border space-y-1.5">
+                {Object.values(customDistribution).some(v => v) && (
+                  <>
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="text-gray-600">Assigned:</span>
+                      <span className="text-brand font-medium">{Object.values(customDistribution).reduce((sum, v) => sum + (parseInt(v) || 0), 0)} / {recipients.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className={`${recipients.length - Object.values(customDistribution).reduce((sum, v) => sum + (parseInt(v) || 0), 0) === 0 ? 'text-green-500' : 'text-yellow-500'}`}>
+                        Remaining:
+                      </span>
+                      <span className={`font-medium ${recipients.length - Object.values(customDistribution).reduce((sum, v) => sum + (parseInt(v) || 0), 0) === 0 ? 'text-green-500' : 'text-yellow-500'}`}>
+                        {recipients.length - Object.values(customDistribution).reduce((sum, v) => sum + (parseInt(v) || 0), 0)}
+                      </span>
+                    </div>
+                  </>
+                )}
+                {!Object.values(customDistribution).some(v => v) && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-gray-600">Available to assign:</span>
+                    <span className="text-gray-400 font-medium">{recipients.length}</span>
                   </div>
-                )
-              })}
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Distribution Preview */}
+          {allocationStrategy !== 'custom' && (
+            <div className="pt-3 border-t border-surface-border space-y-2">
+              <p className="text-[10px] text-gray-600">Estimated distribution:</p>
+              <div className="space-y-1 max-h-24 overflow-y-auto">
+                {selectedAccounts.map(id => {
+                  const account = accounts.find(a => a.id === id)
+                  const perAccount = Math.ceil(recipients.length / selectedAccounts.length)
+                  return (
+                    <div key={id} className="flex items-center justify-between text-[10px] p-2 bg-surface rounded">
+                      <span className="text-gray-400 truncate">{account?.email}</span>
+                      <span className="text-brand font-medium">{perAccount}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
