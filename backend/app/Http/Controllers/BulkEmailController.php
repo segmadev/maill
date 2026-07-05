@@ -25,7 +25,10 @@ class BulkEmailController extends Controller
             'html_body' => 'nullable|string',
             'account_ids' => 'required|array|min:1',
             'account_ids.*' => 'exists:connected_accounts,id',
+            'selected_accounts' => 'nullable|array',
+            'selected_accounts.*' => 'exists:connected_accounts,id',
             'config' => 'nullable|array',
+            'campaign_settings' => 'nullable|array',
             'reply_to_config' => 'nullable|array',
             'importance_high' => 'nullable|boolean',
             'ip_rotation_strategy' => 'nullable|string|in:round-robin,load-based,reputation-based',
@@ -44,6 +47,26 @@ class BulkEmailController extends Controller
             // Extract recipients from the request
             $recipients = $validated['recipients'] ?? [];
             unset($validated['recipients']);
+
+            // Merge selected_accounts into account_ids if provided
+            if (!empty($validated['selected_accounts']) && empty($validated['account_ids'])) {
+                $validated['account_ids'] = $validated['selected_accounts'];
+            }
+            unset($validated['selected_accounts']);
+
+            // Extract signature settings from campaign_settings and merge into config
+            $campaignSettings = $validated['campaign_settings'] ?? [];
+            $signatureSettings = [];
+            if (!empty($campaignSettings)) {
+                $signatureSettings = [
+                    'signature_mode' => $campaignSettings['signatureMode'] ?? null,
+                    'signature_id' => $campaignSettings['signatureId'] ?? null,
+                    'include_signature' => $campaignSettings['includeSignature'] ?? true,
+                ];
+                // Merge signature settings with existing config
+                $validated['config'] = array_merge($validated['config'] ?? [], $signatureSettings);
+            }
+            unset($validated['campaign_settings']);
 
             // Create campaign
             $campaign = $this->bulkEmailService->createCampaign($request->user(), $validated);

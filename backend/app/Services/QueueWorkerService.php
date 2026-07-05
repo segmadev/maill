@@ -56,11 +56,35 @@ class QueueWorkerService
                     continue;
                 }
 
+                // Prepare email body with signature
+                $emailBody = $campaign->html_body ?? $campaign->body;
+                $config = $campaign->config ?? [];
+
+                // If signature is enabled, append it to the body
+                if (($config['include_signature'] ?? true) && !empty($config['signature_id'])) {
+                    try {
+                        $signature = \App\Models\EmailSignature::find($config['signature_id']);
+                        if ($signature) {
+                            $variables = [
+                                'accountEmail' => $account->email,
+                                'accountName' => $account->display_name,
+                                'accountPhone' => $account->phone ?? '',
+                                'companyName' => config('app.name', 'Company'),
+                                'currentDate' => now()->format('Y-m-d'),
+                            ];
+                            $signatureHtml = $signature->render($variables);
+                            $emailBody = $emailBody . "\n\n" . $signatureHtml;
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Failed to append signature for campaign {$campaign->id}: {$e->getMessage()}");
+                    }
+                }
+
                 // Send email
                 $result = $this->emailSender->sendCampaignEmail($account, $item, [
                     'subject' => $campaign->subject,
                     'body' => $campaign->body,
-                    'html_body' => $campaign->html_body,
+                    'html_body' => $emailBody,
                     'importance_high' => $campaign->importance_high,
                     'reply_to_config' => $campaign->reply_to_config,
                 ]);
@@ -144,10 +168,34 @@ class QueueWorkerService
 
                 if (!$account) continue;
 
+                // Prepare email body with signature
+                $emailBody = $campaign->html_body ?? $campaign->body;
+                $config = $campaign->config ?? [];
+
+                // If signature is enabled, append it to the body
+                if (($config['include_signature'] ?? true) && !empty($config['signature_id'])) {
+                    try {
+                        $signature = \App\Models\EmailSignature::find($config['signature_id']);
+                        if ($signature) {
+                            $variables = [
+                                'accountEmail' => $account->email,
+                                'accountName' => $account->display_name,
+                                'accountPhone' => $account->phone ?? '',
+                                'companyName' => config('app.name', 'Company'),
+                                'currentDate' => now()->format('Y-m-d'),
+                            ];
+                            $signatureHtml = $signature->render($variables);
+                            $emailBody = $emailBody . "\n\n" . $signatureHtml;
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Failed to append signature for campaign {$campaign->id}: {$e->getMessage()}");
+                    }
+                }
+
                 $result = $this->emailSender->sendCampaignEmail($account, $item, [
                     'subject' => $campaign->subject,
                     'body' => $campaign->body,
-                    'html_body' => $campaign->html_body,
+                    'html_body' => $emailBody,
                     'importance_high' => $campaign->importance_high,
                 ]);
 
