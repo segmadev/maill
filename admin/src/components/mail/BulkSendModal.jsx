@@ -869,6 +869,9 @@ export default function BulkSendModal({ open, onClose, onCampaignCreated }) {
         senderEmail={null}
         campaignSettings={campaignSettings}
         recipients={recipients}
+        signatureMode={campaignSettings.signature_mode}
+        signatureId={campaignSettings.signature_id}
+        includeSignature={campaignSettings.include_signature}
       />
     </Modal>
   )

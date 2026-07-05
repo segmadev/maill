@@ -26,6 +26,9 @@ export default function EmailHealthCheckModal({
   senderEmail,
   campaignSettings,
   recipients,
+  signatureMode = 'dynamic',
+  signatureId = null,
+  includeSignature = true,
 }) {
   const [loading, setLoading] = useState(false)
   const [healthReport, setHealthReport] = useState(null)
@@ -49,10 +52,29 @@ export default function EmailHealthCheckModal({
     setLoading(true)
     setError(null)
     try {
+      let fullBody = body || ''
+
+      // Include signature in body if enabled
+      if (includeSignature && signatureMode === 'static' && signatureId) {
+        try {
+          const { getSignature } = await import('../../api/admin')
+          const data = await getSignature(signatureId)
+          if (data.signature?.html_content) {
+            fullBody = fullBody + '\n\n' + data.signature.html_content
+          }
+        } catch (err) {
+          console.error('Failed to fetch signature for health check:', err)
+          // Continue with just the body if signature fetch fails
+        }
+      } else if (includeSignature && signatureMode === 'dynamic') {
+        // For dynamic mode, add a note about signature inclusion for context
+        fullBody = fullBody + '\n\n<!-- Each account will append its default signature -->'
+      }
+
       const result = await checkEmailHealth({
         account_id: accountId,
         subject,
-        body,
+        body: fullBody,
         sender_email: senderEmail,
       })
       setHealthReport(result)
