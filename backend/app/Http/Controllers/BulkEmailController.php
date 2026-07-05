@@ -54,10 +54,14 @@ class BulkEmailController extends Controller
             }
             unset($validated['selected_accounts']);
 
-            // Extract signature settings from campaign_settings and merge into config
+            // Extract settings from campaign_settings
             $campaignSettings = $validated['campaign_settings'] ?? [];
-            $signatureSettings = [];
             if (!empty($campaignSettings)) {
+                // Set importance_high from markAsImportant
+                if (isset($campaignSettings['markAsImportant'])) {
+                    $validated['importance_high'] = $campaignSettings['markAsImportant'];
+                }
+                // Extract signature settings and merge into config
                 $signatureSettings = [
                     'signature_mode' => $campaignSettings['signatureMode'] ?? null,
                     'signature_id' => $campaignSettings['signatureId'] ?? null,
