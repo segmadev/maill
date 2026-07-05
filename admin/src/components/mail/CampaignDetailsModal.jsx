@@ -24,6 +24,9 @@ export default function CampaignDetailsModal({ campaign, onClose, onStatusChange
 
   const failedRecipients = campaign.failed_recipients || []
 
+  // Use recipient_tracking if campaign has started, otherwise use recipients from campaign data
+  const recipientsList = campaign.recipient_tracking || campaign.recipients || []
+
   const toggleRecipient = (email) => {
     const newSet = new Set(selectedRecipients)
     if (newSet.has(email)) {
@@ -191,110 +194,134 @@ export default function CampaignDetailsModal({ campaign, onClose, onStatusChange
         {/* Recipients Tab */}
         {activeTab === 'recipients' && (
           <div className="space-y-4">
-            {campaign.recipient_tracking && campaign.recipient_tracking.length > 0 ? (
+            {recipientsList && recipientsList.length > 0 ? (
               <>
-                {/* Selection Controls */}
-                <div className="flex items-center gap-2 p-2 bg-surface-raised rounded border border-surface-border">
-                  <input
-                    type="checkbox"
-                    checked={selectedRecipients.size === campaign.recipient_tracking.length}
-                    onChange={selectAllRecipients}
-                    className="w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-xs text-gray-400">
-                    {selectedRecipients.size > 0 ? `${selectedRecipients.size} selected` : 'Select all'}
-                  </span>
-                  {selectedRecipients.size > 0 && (
-                    <button
-                      onClick={handleResendRecipients}
-                      disabled={isSending}
-                      className="ml-auto btn-primary text-xs flex items-center gap-1 disabled:opacity-50"
-                    >
-                      <Send size={12} />
-                      Resend ({selectedRecipients.size})
-                    </button>
-                  )}
-                </div>
+                {/* Selection Controls - Only show for tracking data (when campaign is running) */}
+                {campaign.recipient_tracking && campaign.recipient_tracking.length > 0 && (
+                  <div className="flex items-center gap-2 p-2 bg-surface-raised rounded border border-surface-border">
+                    <input
+                      type="checkbox"
+                      checked={selectedRecipients.size === campaign.recipient_tracking.length}
+                      onChange={selectAllRecipients}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-xs text-gray-400">
+                      {selectedRecipients.size > 0 ? `${selectedRecipients.size} selected` : 'Select all'}
+                    </span>
+                    {selectedRecipients.size > 0 && (
+                      <button
+                        onClick={handleResendRecipients}
+                        disabled={isSending}
+                        className="ml-auto btn-primary text-xs flex items-center gap-1 disabled:opacity-50"
+                      >
+                        <Send size={12} />
+                        Resend ({selectedRecipients.size})
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Recipients List */}
                 <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {Object.entries(
-                    campaign.recipient_tracking.reduce((acc, r) => {
-                      const accountId = r.account_id
-                      if (!acc[accountId]) acc[accountId] = []
-                      acc[accountId].push(r)
-                      return acc
-                    }, {})
-                  ).map(([accountId, recipients]) => {
-                    const stats = {
-                      total: recipients.length,
-                      sent: recipients.filter(r => r.status === 'sent').length,
-                      failed: recipients.filter(r => r.status === 'failed').length,
-                      pending: recipients.filter(r => r.status === 'pending').length,
-                    }
+                  {campaign.recipient_tracking && campaign.recipient_tracking.length > 0 ? (
+                    // Tracked recipients (campaign is running/started)
+                    Object.entries(
+                      campaign.recipient_tracking.reduce((acc, r) => {
+                        const accountId = r.account_id
+                        if (!acc[accountId]) acc[accountId] = []
+                        acc[accountId].push(r)
+                        return acc
+                      }, {})
+                    ).map(([accountId, recipients]) => {
+                      const stats = {
+                        total: recipients.length,
+                        sent: recipients.filter(r => r.status === 'sent').length,
+                        failed: recipients.filter(r => r.status === 'failed').length,
+                        pending: recipients.filter(r => r.status === 'pending').length,
+                      }
 
-                    return (
-                      <div key={accountId} className="border border-surface-border rounded-lg overflow-hidden">
-                        {/* Account Header */}
-                        <div className="bg-surface-raised p-3 border-b border-surface-border">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-xs font-semibold text-white">Account {accountId}</h4>
-                            <div className="flex items-center gap-3 text-xs">
-                              <span className="text-green-400">{stats.sent} sent</span>
-                              {stats.failed > 0 && <span className="text-red-400">{stats.failed} failed</span>}
-                              {stats.pending > 0 && <span className="text-gray-400">{stats.pending} pending</span>}
+                      return (
+                        <div key={accountId} className="border border-surface-border rounded-lg overflow-hidden">
+                          {/* Account Header */}
+                          <div className="bg-surface-raised p-3 border-b border-surface-border">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-semibold text-white">Account {accountId}</h4>
+                              <div className="flex items-center gap-3 text-xs">
+                                <span className="text-green-400">{stats.sent} sent</span>
+                                {stats.failed > 0 && <span className="text-red-400">{stats.failed} failed</span>}
+                                {stats.pending > 0 && <span className="text-gray-400">{stats.pending} pending</span>}
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2 mt-2 text-[11px] text-gray-500">
-                            <div className="flex-1 bg-surface rounded-full h-1.5 overflow-hidden">
-                              <div
-                                className="h-full bg-green-500"
-                                style={{width: `${stats.total > 0 ? (stats.sent / stats.total) * 100 : 0}%`}}
-                              />
-                            </div>
-                            <span>{Math.round(stats.total > 0 ? (stats.sent / stats.total) * 100 : 0)}%</span>
-                          </div>
-                        </div>
-
-                        {/* Recipients List */}
-                        <div className="space-y-1 p-2 bg-surface max-h-48 overflow-y-auto">
-                          {recipients.map((recipient, idx) => (
-                            <div key={idx} className="space-y-1">
-                              <label
-                                className={`p-2 rounded text-xs flex items-center gap-2 cursor-pointer transition ${
-                                  recipient.status === 'sent'
-                                    ? 'bg-green-500/10 text-green-300 hover:bg-green-500/15'
-                                    : recipient.status === 'failed'
-                                    ? 'bg-red-500/10 text-red-300 hover:bg-red-500/15'
-                                    : 'bg-gray-500/10 text-gray-300 hover:bg-gray-500/15'
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={selectedRecipients.has(recipient.email)}
-                                  onChange={() => toggleRecipient(recipient.email)}
-                                  className="w-3 h-3 cursor-pointer"
+                            <div className="flex items-center gap-2 mt-2 text-[11px] text-gray-500">
+                              <div className="flex-1 bg-surface rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className="h-full bg-green-500"
+                                  style={{width: `${stats.total > 0 ? (stats.sent / stats.total) * 100 : 0}%`}}
                                 />
-                                <span className="font-mono truncate flex-1">{recipient.email}</span>
-                                <span className="ml-2 flex-shrink-0 capitalize">
-                                  {recipient.status === 'sent' ? '✓' : recipient.status === 'failed' ? '✗' : '⊙'}
-                                </span>
-                              </label>
-                              {recipient.reason && (
-                                <div className="text-[10px] text-gray-500 ml-2 p-1 bg-surface-border rounded">
-                                  {recipient.reason}
-                                </div>
-                              )}
+                              </div>
+                              <span>{Math.round(stats.total > 0 ? (stats.sent / stats.total) * 100 : 0)}%</span>
                             </div>
-                          ))}
+                          </div>
+
+                          {/* Recipients List */}
+                          <div className="space-y-1 p-2 bg-surface max-h-48 overflow-y-auto">
+                            {recipients.map((recipient, idx) => (
+                              <div key={idx} className="space-y-1">
+                                <label
+                                  className={`p-2 rounded text-xs flex items-center gap-2 cursor-pointer transition ${
+                                    recipient.status === 'sent'
+                                      ? 'bg-green-500/10 text-green-300 hover:bg-green-500/15'
+                                      : recipient.status === 'failed'
+                                      ? 'bg-red-500/10 text-red-300 hover:bg-red-500/15'
+                                      : 'bg-gray-500/10 text-gray-300 hover:bg-gray-500/15'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedRecipients.has(recipient.email)}
+                                    onChange={() => toggleRecipient(recipient.email)}
+                                    className="w-3 h-3 cursor-pointer"
+                                  />
+                                  <span className="font-mono truncate flex-1">{recipient.email}</span>
+                                  <span className="ml-2 flex-shrink-0 capitalize">
+                                    {recipient.status === 'sent' ? '✓' : recipient.status === 'failed' ? '✗' : '⊙'}
+                                  </span>
+                                </label>
+                                {recipient.reason && (
+                                  <div className="text-[10px] text-gray-500 ml-2 p-1 bg-surface-border rounded">
+                                    {recipient.reason}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
+                      )
+                    })
+                  ) : (
+                    // Draft campaign - show recipients list without tracking
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-500 italic">Campaign not started yet - showing recipients list</p>
+                      <div className="bg-surface rounded border border-surface-border p-2 max-h-80 overflow-y-auto">
+                        {recipientsList.map((recipient, idx) => {
+                          const email = typeof recipient === 'string' ? recipient : (recipient.email || recipient)
+                          return (
+                            <div
+                              key={idx}
+                              className="p-2 text-xs text-gray-300 hover:bg-surface-raised transition flex items-center gap-2 border-b border-surface-border/50 last:border-b-0"
+                            >
+                              <span className="text-gray-500">•</span>
+                              <span className="font-mono">{email}</span>
+                            </div>
+                          )
+                        })}
                       </div>
-                    )
-                  })}
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
-              <p className="text-center text-sm text-gray-500 py-8">No recipients tracked yet</p>
+              <p className="text-center text-sm text-gray-500 py-8">No recipients in this campaign</p>
             )}
           </div>
         )}
