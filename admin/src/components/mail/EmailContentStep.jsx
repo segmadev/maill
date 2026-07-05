@@ -274,7 +274,7 @@ export default function EmailContentStep({
               {signatureMode === 'static' && (
                 <div className="space-y-2 border-t border-surface-border pt-3">
                   <label className="text-xs font-semibold text-gray-400 uppercase">Select Signature</label>
-                  {selectedAccountIds && selectedAccountIds[0] ? (
+                  {selectedAccountIds && selectedAccountIds.length > 0 && selectedAccountIds[0] ? (
                     <>
                       <SignatureSelector
                         accountId={selectedAccountIds[0]}

@@ -476,7 +476,7 @@ export default function BulkSendModal({ open, onClose, onCampaignCreated }) {
               }))
             }
           }}
-          selectedAccountIds={campaignSettings.selectedAccounts || []}
+          selectedAccountIds={(campaignSettings.selectedAccounts || []).filter(id => id !== null && id)}
         />
       )}
 
