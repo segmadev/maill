@@ -73,6 +73,10 @@ class QueueWorkerService
                         } else if ($signatureMode === 'dynamic') {
                             // For dynamic mode, get the account's default signature
                             $signature = $account->signatures()->wherePivot('is_default', true)->first();
+                            // Fallback to first available signature if no default is set
+                            if (!$signature && $account->signatures->count() > 0) {
+                                $signature = $account->signatures->first();
+                            }
                         }
 
                         if ($signature) {
@@ -198,6 +202,10 @@ class QueueWorkerService
                         } else if ($signatureMode === 'dynamic') {
                             // For dynamic mode, get the account's default signature
                             $signature = $account->signatures()->wherePivot('is_default', true)->first();
+                            // Fallback to first available signature if no default is set
+                            if (!$signature && $account->signatures->count() > 0) {
+                                $signature = $account->signatures->first();
+                            }
                         }
 
                         if ($signature) {

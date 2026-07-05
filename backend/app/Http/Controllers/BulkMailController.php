@@ -221,6 +221,9 @@ class BulkMailController extends Controller
             $defaultSig = $account->signatures()->wherePivot('is_default', true)->first();
             if ($defaultSig) {
                 $customSignature = $defaultSig;
+            } else if ($account->signatures->count() > 0) {
+                // Fallback to first available signature if no default
+                $customSignature = $account->signatures->first();
             }
         }
 
