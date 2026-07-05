@@ -188,6 +188,49 @@ export default function CampaignDetailsModal({ campaign, onClose, onStatusChange
                 })}
               </div>
             </div>
+
+            {/* Campaign Settings */}
+            <div className="bg-surface-raised rounded-lg p-4 border border-surface-border space-y-3">
+              <label className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-2">
+                <Settings size={12} />
+                Campaign Settings
+              </label>
+              <div className="space-y-2">
+                {/* Signature Settings */}
+                <div className="flex items-center justify-between p-2 bg-surface rounded text-xs">
+                  <span className="text-gray-400">Signature</span>
+                  <span className="text-white font-medium">
+                    {campaign.config?.signature_mode === 'static'
+                      ? `Static${campaign.config?.signature_id ? ' ✓' : ' (Not set)'}`
+                      : campaign.config?.signature_mode === 'dynamic'
+                      ? 'Dynamic ✓'
+                      : 'Not set'}
+                  </span>
+                </div>
+
+                {/* Include Signature */}
+                <div className="flex items-center justify-between p-2 bg-surface rounded text-xs">
+                  <span className="text-gray-400">Include Signature</span>
+                  <span className={`font-medium ${campaign.config?.include_signature !== false ? 'text-green-400' : 'text-gray-500'}`}>
+                    {campaign.config?.include_signature !== false ? 'Yes' : 'No'}
+                  </span>
+                </div>
+
+                {/* Mark as Important */}
+                <div className="flex items-center justify-between p-2 bg-surface rounded text-xs">
+                  <span className="text-gray-400">Mark as Important</span>
+                  <span className={`font-medium ${campaign.importance_high ? 'text-orange-400' : 'text-gray-500'}`}>
+                    {campaign.importance_high ? '★ Yes' : 'No'}
+                  </span>
+                </div>
+
+                {/* Distribution Strategy */}
+                <div className="flex items-center justify-between p-2 bg-surface rounded text-xs">
+                  <span className="text-gray-400">Distribution</span>
+                  <span className="text-white font-medium capitalize">{campaign.recipient_distribution || 'round-robin'}</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
