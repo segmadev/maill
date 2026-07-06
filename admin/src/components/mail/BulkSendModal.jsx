@@ -321,7 +321,7 @@ export default function BulkSendModal({ open, onClose, onCampaignCreated }) {
     if (currentStep === 2 && window.__accountSelection) {
       setCampaignSettings(prev => ({
         ...prev,
-        selectedAccounts: window.__accountSelection.selectedAccounts,
+        selectedAccounts: (window.__accountSelection.selectedAccounts || []).filter(id => id !== null && id !== undefined),
         allocationStrategy: window.__accountSelection.allocationStrategy,
         customDistribution: window.__accountSelection.customDistribution || null,
       }))

@@ -23,11 +23,11 @@ export default function AccountSelectionStep({
 }) {
   const [searchQuery, setSearchQuery] = useState('')
   // Use previousSelection if available (when going back), otherwise use accountId
-  const [selectedAccounts, setSelectedAccounts] = useState(
-    previousSelection && previousSelection.length > 0 && previousSelection[0] !== null
-      ? previousSelection
-      : [accountId]
-  )
+  // Always filter out null values to prevent invalid account selections
+  const [selectedAccounts, setSelectedAccounts] = useState(() => {
+    const filtered = previousSelection?.filter(id => id !== null && id !== undefined) || []
+    return filtered.length > 0 ? filtered : [accountId]
+  })
   const [allocationStrategy, setAllocationStrategy] = useState(previousAllocationStrategy)
   const [customDistribution, setCustomDistribution] = useState(previousCustomDistribution || {})
   const [filterType, setFilterType] = useState('all') // 'all', 'oauth', 'smtp'
@@ -107,9 +107,9 @@ export default function AccountSelectionStep({
       }
     }
 
-    // Store selection in window for next steps
+    // Store selection in window for next steps (filter out null values)
     window.__accountSelection = {
-      selectedAccounts,
+      selectedAccounts: selectedAccounts.filter(id => id !== null && id !== undefined),
       allocationStrategy,
       customDistribution: allocationStrategy === 'custom' ? customDistribution : null,
     }
