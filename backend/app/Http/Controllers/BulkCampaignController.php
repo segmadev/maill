@@ -562,6 +562,31 @@ class BulkCampaignController extends Controller
         $allocationStrategy = $campaignSettings['allocationStrategy'] ?? 'round-robin';
         $customDistribution = $campaignSettings['customDistribution'] ?? null;
         $recipients = is_array($campaign->recipients) ? $campaign->recipients : [];
+        $batchHistory = is_array($campaign->batch_history) ? $campaign->batch_history : [];
+        $failedRecipients = is_array($campaign->failed_recipients) ? $campaign->failed_recipients : [];
+
+        // Build map of email statuses from batch history
+        $recipientStatus = [];
+        $recipientSentAt = [];
+
+        // Mark sent recipients
+        foreach ($batchHistory as $batch) {
+            if (isset($batch['recipients']) && is_array($batch['recipients'])) {
+                foreach ($batch['recipients'] as $email) {
+                    $email = is_string($email) ? $email : $email;
+                    $recipientStatus[$email] = 'sent';
+                    $recipientSentAt[$email] = $batch['sentAt'] ?? null;
+                }
+            }
+        }
+
+        // Mark failed recipients
+        foreach ($failedRecipients as $failedItem) {
+            $email = is_string($failedItem) ? $failedItem : ($failedItem['email'] ?? '');
+            if ($email) {
+                $recipientStatus[$email] = 'failed';
+            }
+        }
 
         // Initialize breakdown for all selected accounts
         $breakdown = [];
@@ -597,12 +622,18 @@ class BulkCampaignController extends Controller
                 if (empty($email)) continue;
 
                 $accountId = $selectedAccounts[$accountIndex];
+                $status = $recipientStatus[$email] ?? 'pending';
+
                 $breakdown[$accountId]['total_count']++;
+                if ($status === 'sent') $breakdown[$accountId]['sent_count']++;
+                elseif ($status === 'failed') $breakdown[$accountId]['failed_count']++;
+                else $breakdown[$accountId]['pending_count']++;
+
                 $breakdown[$accountId]['recipients'][] = [
                     'email' => $email,
                     'name' => is_array($recipient) ? ($recipient['name'] ?? $email) : $email,
-                    'status' => 'pending',
-                    'sent_at' => null,
+                    'status' => $status,
+                    'sent_at' => $recipientSentAt[$email] ?? null,
                     'error_message' => null,
                 ];
 
@@ -621,12 +652,18 @@ class BulkCampaignController extends Controller
 
                 $accountIndex = $index % count($selectedAccounts);
                 $accountId = $selectedAccounts[$accountIndex];
+                $status = $recipientStatus[$email] ?? 'pending';
+
                 $breakdown[$accountId]['total_count']++;
+                if ($status === 'sent') $breakdown[$accountId]['sent_count']++;
+                elseif ($status === 'failed') $breakdown[$accountId]['failed_count']++;
+                else $breakdown[$accountId]['pending_count']++;
+
                 $breakdown[$accountId]['recipients'][] = [
                     'email' => $email,
                     'name' => is_array($recipient) ? ($recipient['name'] ?? $email) : $email,
-                    'status' => 'pending',
-                    'sent_at' => null,
+                    'status' => $status,
+                    'sent_at' => $recipientSentAt[$email] ?? null,
                     'error_message' => null,
                 ];
             }
