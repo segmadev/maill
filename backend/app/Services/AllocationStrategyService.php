@@ -32,6 +32,8 @@ class AllocationStrategyService
                 $accountIndex = $index % count($accountIds);
                 $allocation[] = [
                     'email' => $recipient['email'],
+                    'name' => $recipient['name'] ?? null,
+                    'group' => $recipient['group'] ?? null,
                     'account_id' => $accountIds[$accountIndex],
                     'status' => 'pending',
                     'reason' => null,
@@ -46,6 +48,8 @@ class AllocationStrategyService
             foreach ($recipients as $recipient) {
                 $allocation[] = [
                     'email' => $recipient['email'],
+                    'name' => $recipient['name'] ?? null,
+                    'group' => $recipient['group'] ?? null,
                     'account_id' => $accountIds[$accountIndex],
                     'status' => 'pending',
                     'reason' => null,
@@ -69,6 +73,8 @@ class AllocationStrategyService
             foreach ($recipients as $recipient) {
                 $allocation[] = [
                     'email' => $recipient['email'],
+                    'name' => $recipient['name'] ?? null,
+                    'group' => $recipient['group'] ?? null,
                     'account_id' => $accountIds[$accountIndex],
                     'status' => 'pending',
                     'reason' => null,

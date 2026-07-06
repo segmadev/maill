@@ -46,11 +46,16 @@ class QueueWorkerService
                     break;
                 }
 
-                // Select account
-                $account = $this->selectAccountForEmail($campaign, $item);
+                // Use pre-allocated account or fall back to selection
+                $account = null;
+                if ($item->assigned_account_id) {
+                    $account = ConnectedAccount::find($item->assigned_account_id);
+                } else {
+                    $account = $this->selectAccountForEmail($campaign, $item);
+                }
 
                 if (!$account) {
-                    Log::warning("No available account for campaign {$campaign->id}");
+                    Log::warning("No available account for campaign {$campaign->id} item {$item->id}");
                     $item->update(['status' => 'failed', 'error_message' => 'No available accounts']);
                     $stats['failed']++;
                     continue;
@@ -181,7 +186,14 @@ class QueueWorkerService
         foreach ($retryItems as $item) {
             try {
                 $campaign = $item->campaign;
-                $account = $this->selectAccountForEmail($campaign, $item);
+
+                // Use pre-allocated account or fall back to selection
+                $account = null;
+                if ($item->assigned_account_id) {
+                    $account = ConnectedAccount::find($item->assigned_account_id);
+                } else {
+                    $account = $this->selectAccountForEmail($campaign, $item);
+                }
 
                 if (!$account) continue;
 

@@ -62,6 +62,7 @@ class BulkEmailController extends Controller
                     $validated['importance_high'] = (bool) $campaignSettings['markAsImportant'];
                     Log::info("Campaign importance_high set to: " . ($validated['importance_high'] ? 'true' : 'false'));
                 }
+
                 // Extract signature settings and merge into config
                 $signatureSettings = [
                     'signature_mode' => $campaignSettings['signatureMode'] ?? null,
@@ -70,6 +71,16 @@ class BulkEmailController extends Controller
                 ];
                 // Merge signature settings with existing config
                 $validated['config'] = array_merge($validated['config'] ?? [], $signatureSettings);
+
+                // Extract allocation strategy and custom distribution
+                if (isset($campaignSettings['allocationStrategy'])) {
+                    $validated['recipient_distribution'] = $campaignSettings['allocationStrategy'];
+                }
+
+                // Store custom distribution in account_config
+                if (isset($campaignSettings['customDistribution'])) {
+                    $validated['account_config'] = $campaignSettings['customDistribution'];
+                }
             }
             unset($validated['campaign_settings']);
 

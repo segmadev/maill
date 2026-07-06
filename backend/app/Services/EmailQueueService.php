@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Log;
 
 class EmailQueueService
 {
+    public function __construct(
+        private AllocationStrategyService $allocationStrategy,
+    ) {}
+
     /**
      * Generate queue items from recipients
      */
@@ -15,12 +19,33 @@ class EmailQueueService
     {
         $count = 0;
 
-        foreach ($recipients as $recipient) {
-            $email = is_array($recipient) ? $recipient['email'] : $recipient;
-            $name = is_array($recipient) ? ($recipient['name'] ?? null) : null;
-            $group = is_array($recipient) ? ($recipient['group'] ?? null) : null;
+        // Format recipients for allocation
+        $formattedRecipients = array_map(function ($recipient) {
+            return [
+                'email' => is_array($recipient) ? $recipient['email'] : $recipient,
+                'name' => is_array($recipient) ? ($recipient['name'] ?? null) : null,
+                'group' => is_array($recipient) ? ($recipient['group'] ?? null) : null,
+            ];
+        }, $recipients);
 
-            // Skip if already in queue
+        // Get allocation based on strategy
+        $accountIds = $campaign->account_ids ?? [];
+        $strategy = $campaign->recipient_distribution ?? 'round-robin';
+        $customDistribution = $campaign->account_config ?? null;
+
+        // Apply allocation strategy to get account assignments
+        $allocation = $this->allocationStrategy->allocate(
+            $formattedRecipients,
+            $accountIds,
+            $strategy,
+            $customDistribution
+        );
+
+        // Create queue items with pre-allocated accounts
+        foreach ($allocation as $item) {
+            $email = $item['email'];
+
+            // Skip if already in queue (deduplication)
             if (
                 BulkEmailQueueItem::where('campaign_id', $campaign->id)
                     ->where('recipient_email', $email)
@@ -32,8 +57,9 @@ class EmailQueueService
             BulkEmailQueueItem::create([
                 'campaign_id' => $campaign->id,
                 'recipient_email' => $email,
-                'recipient_name' => $name,
-                'recipient_group' => $group,
+                'recipient_name' => $item['name'] ?? null,
+                'recipient_group' => $item['group'] ?? null,
+                'assigned_account_id' => $item['account_id'],
                 'status' => 'pending',
             ]);
 
@@ -43,7 +69,7 @@ class EmailQueueService
         // Update campaign recipient count
         $campaign->update(['recipient_count' => BulkEmailQueueItem::where('campaign_id', $campaign->id)->count()]);
 
-        Log::info("Generated {$count} queue items for campaign {$campaign->id}");
+        Log::info("Generated {$count} queue items for campaign {$campaign->id} using {$strategy} distribution");
 
         return $count;
     }
