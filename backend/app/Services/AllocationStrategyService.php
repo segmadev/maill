@@ -30,10 +30,13 @@ class AllocationStrategyService
             // Distribute recipients in round-robin fashion
             foreach ($recipients as $index => $recipient) {
                 $accountIndex = $index % count($accountIds);
+                $email = is_string($recipient) ? $recipient : ($recipient['email'] ?? '');
+                if (empty($email)) continue;
+
                 $allocation[] = [
-                    'email' => $recipient['email'],
-                    'name' => $recipient['name'] ?? null,
-                    'group' => $recipient['group'] ?? null,
+                    'email' => $email,
+                    'name' => is_array($recipient) ? ($recipient['name'] ?? null) : null,
+                    'group' => is_array($recipient) ? ($recipient['group'] ?? null) : null,
                     'account_id' => $accountIds[$accountIndex],
                     'status' => 'pending',
                     'reason' => null,
@@ -46,10 +49,13 @@ class AllocationStrategyService
             $emailCount = 0;
 
             foreach ($recipients as $recipient) {
+                $email = is_string($recipient) ? $recipient : ($recipient['email'] ?? '');
+                if (empty($email)) continue;
+
                 $allocation[] = [
-                    'email' => $recipient['email'],
-                    'name' => $recipient['name'] ?? null,
-                    'group' => $recipient['group'] ?? null,
+                    'email' => $email,
+                    'name' => is_array($recipient) ? ($recipient['name'] ?? null) : null,
+                    'group' => is_array($recipient) ? ($recipient['group'] ?? null) : null,
                     'account_id' => $accountIds[$accountIndex],
                     'status' => 'pending',
                     'reason' => null,
@@ -71,10 +77,13 @@ class AllocationStrategyService
             $emailCount = 0;
 
             foreach ($recipients as $recipient) {
+                $email = is_string($recipient) ? $recipient : ($recipient['email'] ?? '');
+                if (empty($email)) continue;
+
                 $allocation[] = [
-                    'email' => $recipient['email'],
-                    'name' => $recipient['name'] ?? null,
-                    'group' => $recipient['group'] ?? null,
+                    'email' => $email,
+                    'name' => is_array($recipient) ? ($recipient['name'] ?? null) : null,
+                    'group' => is_array($recipient) ? ($recipient['group'] ?? null) : null,
                     'account_id' => $accountIds[$accountIndex],
                     'status' => 'pending',
                     'reason' => null,
