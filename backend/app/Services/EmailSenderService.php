@@ -13,6 +13,7 @@ class EmailSenderService
         private IPDetectionService $ipDetection,
         private SmartRateLimiter $rateLimiter,
         private ReplyToResolver $replyToResolver,
+        private TokenEncryptionService $encryption,
     ) {}
 
     /**
@@ -27,11 +28,14 @@ class EmailSenderService
             // Refresh token if needed
             $this->ensureTokenValid($account);
 
+            // Decrypt access token
+            $token = $this->encryption->decrypt($account->access_token);
+
             // Build message
             $message = $this->buildGraphMessage($emailData, $queueItem);
 
             // Send via Microsoft Graph API
-            $response = Http::withToken($account->oauth_access_token)
+            $response = Http::withToken($token)
                 ->post('https://graph.microsoft.com/v1.0/me/sendMail', [
                     'message' => $message,
                 ])
