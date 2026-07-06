@@ -225,7 +225,13 @@ class EmailSenderService
             ]);
         } catch (\Exception $e) {
             Log::error("Token refresh failed for account {$account->id}: {$e->getMessage()}");
-            throw new \Exception('Token refresh failed');
+
+            // Check if it's an invalid_grant error (expired refresh token)
+            if (str_contains($e->getMessage(), 'invalid_grant')) {
+                throw new \Exception("account_needs_reauth: Account {$account->id} requires re-authentication. Please reconnect this account in the Accounts page.");
+            }
+
+            throw new \Exception('Token refresh failed. Please try again or reconnect the account.');
         }
     }
 }

@@ -185,12 +185,16 @@ export default function BulkSendPage() {
       const errorCode = err.response?.data?.error
       const errorMsg = err.response?.data?.message
 
-      if (errorCode === 'graph_forbidden') {
+      if (errorCode === 'account_needs_reauth' || errorMsg?.includes('account_needs_reauth')) {
+        toast.error('⚠️ Account needs re-authentication. Please go to Accounts and reconnect this account.')
+      } else if (errorCode === 'graph_forbidden') {
         toast.error('Account suspended: Check your Microsoft account inbox to verify your account')
       } else if (errorMsg?.includes('suspended')) {
         toast.error('Account is suspended. Please verify your Microsoft account.')
       } else if (errorMsg?.includes('rate limit')) {
         toast.error('Rate limit exceeded. Wait a few minutes before trying again.')
+      } else if (errorMsg?.includes('requires re-authentication')) {
+        toast.error('⚠️ Account needs re-authentication. Please go to Accounts and reconnect this account.')
       } else {
         toast.error(errorMsg || 'Failed to start campaign')
       }
