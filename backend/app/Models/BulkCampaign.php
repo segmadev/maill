@@ -24,6 +24,7 @@ class BulkCampaign extends Model
         'completed_at',
         'batch_history',
         'failed_recipients',
+        'recipient_tracking',
         'user_id',
         'created_by',
     ];
@@ -35,6 +36,7 @@ class BulkCampaign extends Model
         'campaign_settings' => 'array',
         'batch_history' => 'array',
         'failed_recipients' => 'array',
+        'recipient_tracking' => 'array',
         'started_at' => 'datetime',
         'paused_at' => 'datetime',
         'completed_at' => 'datetime',
