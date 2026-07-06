@@ -31,7 +31,7 @@ export default function AllocationBreakdownTree({ campaignId }) {
 
   if (loading) return <Spinner size={24} />
   if (error) return <div className="text-red-400 text-sm">{error}</div>
-  if (!data) return null
+  if (!data || !data.breakdown) return <div className="text-gray-500 text-sm">No allocation data</div>
 
   const toggleAccount = (accountId) => {
     const newSet = new Set(expandedAccounts)
@@ -160,9 +160,10 @@ export default function AllocationBreakdownTree({ campaignId }) {
                     <p className="text-xs text-gray-600 py-1">No recipients assigned</p>
                   ) : (
                     accountBreakdown.recipients.map((recipient, idx) => {
+                      if (!recipient || !recipient.email) return null
                       const recipientKey = `${accountBreakdown.account_id}-${recipient.email}`
                       const isRecipientExpanded = expandedRecipients.has(recipientKey)
-                      const hasError = recipient.error_message
+                      const hasError = recipient.error_message && typeof recipient.error_message === 'string'
 
                       return (
                         <div key={idx} className="bg-surface rounded border border-surface-border/50 overflow-hidden">
@@ -208,10 +209,10 @@ export default function AllocationBreakdownTree({ campaignId }) {
                           </button>
 
                           {/* Error Details */}
-                          {hasError && isRecipientExpanded && (
+                          {hasError && isRecipientExpanded && recipient.error_message && (
                             <div className="border-t border-surface-border/50 bg-red-500/5 px-2.5 py-1.5">
                               <p className="text-[10px] text-red-300 break-words">
-                                {recipient.error_message}
+                                {typeof recipient.error_message === 'string' ? recipient.error_message : 'Unknown error'}
                               </p>
                             </div>
                           )}

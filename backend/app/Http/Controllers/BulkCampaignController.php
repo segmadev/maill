@@ -561,14 +561,31 @@ class BulkCampaignController extends Controller
         $selectedAccounts = $campaignSettings['selectedAccounts'] ?? [];
         $allocationStrategy = $campaignSettings['allocationStrategy'] ?? 'round-robin';
         $customDistribution = $campaignSettings['customDistribution'] ?? null;
+        $recipients = is_array($campaign->recipients) ? $campaign->recipients : [];
 
-        // Get recipients list
-        $recipients = $campaign->recipients ?? [];
-        $batchHistory = $campaign->batch_history ?? [];
-
-        // Group recipients by account
+        // Initialize breakdown for all selected accounts
         $breakdown = [];
+        foreach ($selectedAccounts as $accountId) {
+            $breakdown[$accountId] = [
+                'account_id' => $accountId,
+                'total_count' => 0,
+                'sent_count' => 0,
+                'pending_count' => 0,
+                'failed_count' => 0,
+                'recipients' => [],
+            ];
+        }
 
+        if (empty($selectedAccounts) || empty($recipients)) {
+            return response()->json([
+                'campaign_id' => $campaign->id,
+                'total_recipients' => count($recipients),
+                'distribution_strategy' => $allocationStrategy,
+                'breakdown' => array_values($breakdown),
+            ]);
+        }
+
+        // Allocate recipients to accounts
         if ($allocationStrategy === 'custom' && $customDistribution) {
             // Custom distribution
             $accountIndex = 0;
@@ -576,44 +593,16 @@ class BulkCampaignController extends Controller
             $emailsForAccount = (int)($customDistribution[$selectedAccounts[$accountIndex]] ?? 0);
 
             foreach ($recipients as $recipient) {
+                $email = is_string($recipient) ? $recipient : ($recipient['email'] ?? '');
+                if (empty($email)) continue;
+
                 $accountId = $selectedAccounts[$accountIndex];
-
-                if (!isset($breakdown[$accountId])) {
-                    $breakdown[$accountId] = [
-                        'account_id' => $accountId,
-                        'total_count' => 0,
-                        'sent_count' => 0,
-                        'pending_count' => 0,
-                        'failed_count' => 0,
-                        'recipients' => [],
-                    ];
-                }
-
-                // Find status in batch history
-                $status = 'pending';
-                $sentAt = null;
-                foreach ($batchHistory as $batch) {
-                    if (isset($batch['recipients']) && in_array($recipient, $batch['recipients'])) {
-                        $status = 'sent';
-                        $sentAt = $batch['sentAt'] ?? null;
-                        break;
-                    }
-                    if (isset($batch['failed']) && array_any($batch['failed'], fn($f) => $f['email'] === $recipient)) {
-                        $status = 'failed';
-                        break;
-                    }
-                }
-
                 $breakdown[$accountId]['total_count']++;
-                if ($status === 'sent') $breakdown[$accountId]['sent_count']++;
-                elseif ($status === 'failed') $breakdown[$accountId]['failed_count']++;
-                else $breakdown[$accountId]['pending_count']++;
-
                 $breakdown[$accountId]['recipients'][] = [
-                    'email' => $recipient,
-                    'name' => $recipient,
-                    'status' => $status,
-                    'sent_at' => $sentAt,
+                    'email' => $email,
+                    'name' => is_array($recipient) ? ($recipient['name'] ?? $email) : $email,
+                    'status' => 'pending',
+                    'sent_at' => null,
                     'error_message' => null,
                 ];
 
@@ -625,73 +614,29 @@ class BulkCampaignController extends Controller
                 }
             }
         } else {
-            // Round-robin, equal, or sequential
+            // Round-robin distribution
             foreach ($recipients as $index => $recipient) {
+                $email = is_string($recipient) ? $recipient : ($recipient['email'] ?? '');
+                if (empty($email)) continue;
+
                 $accountIndex = $index % count($selectedAccounts);
                 $accountId = $selectedAccounts[$accountIndex];
-
-                if (!isset($breakdown[$accountId])) {
-                    $breakdown[$accountId] = [
-                        'account_id' => $accountId,
-                        'total_count' => 0,
-                        'sent_count' => 0,
-                        'pending_count' => 0,
-                        'failed_count' => 0,
-                        'recipients' => [],
-                    ];
-                }
-
-                // Find status in batch history
-                $status = 'pending';
-                $sentAt = null;
-                foreach ($batchHistory as $batch) {
-                    if (isset($batch['recipients']) && in_array($recipient, $batch['recipients'])) {
-                        $status = 'sent';
-                        $sentAt = $batch['sentAt'] ?? null;
-                        break;
-                    }
-                    if (isset($batch['failed']) && array_any($batch['failed'], fn($f) => $f['email'] === $recipient)) {
-                        $status = 'failed';
-                        break;
-                    }
-                }
-
                 $breakdown[$accountId]['total_count']++;
-                if ($status === 'sent') $breakdown[$accountId]['sent_count']++;
-                elseif ($status === 'failed') $breakdown[$accountId]['failed_count']++;
-                else $breakdown[$accountId]['pending_count']++;
-
                 $breakdown[$accountId]['recipients'][] = [
-                    'email' => $recipient,
-                    'name' => $recipient,
-                    'status' => $status,
-                    'sent_at' => $sentAt,
+                    'email' => $email,
+                    'name' => is_array($recipient) ? ($recipient['name'] ?? $email) : $email,
+                    'status' => 'pending',
+                    'sent_at' => null,
                     'error_message' => null,
                 ];
             }
         }
 
-        // Ensure all selected accounts are in breakdown
-        foreach ($selectedAccounts as $accountId) {
-            if (!isset($breakdown[$accountId])) {
-                $breakdown[$accountId] = [
-                    'account_id' => $accountId,
-                    'total_count' => 0,
-                    'sent_count' => 0,
-                    'pending_count' => 0,
-                    'failed_count' => 0,
-                    'recipients' => [],
-                ];
-            }
-        }
-
-        $breakdownArray = array_values($breakdown);
-
         return response()->json([
             'campaign_id' => $campaign->id,
             'total_recipients' => count($recipients),
             'distribution_strategy' => $allocationStrategy,
-            'breakdown' => $breakdownArray,
+            'breakdown' => array_values($breakdown),
         ]);
     }
 
