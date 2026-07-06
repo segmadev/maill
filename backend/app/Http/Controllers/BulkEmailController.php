@@ -263,46 +263,6 @@ class BulkEmailController extends Controller
         ]);
     }
 
-    public function getAllocationBreakdown(Request $request, int $id): JsonResponse
-    {
-        $campaign = BulkEmailCampaign::where('user_id', $request->user()->id)->find($id);
-        if (!$campaign) {
-            return response()->json(['error' => 'not_found', 'message' => 'Campaign not found'], 404);
-        }
-
-        $queueItems = $campaign->queueItems()->get();
-        $accounts = ConnectedAccount::whereIn('id', $campaign->account_ids ?? [])->get()->keyBy('id');
-
-        $breakdown = [];
-
-        foreach ($accounts as $accountId => $account) {
-            $items = $queueItems->where('assigned_account_id', $accountId);
-            $breakdown[] = [
-                'account_id' => $account->id,
-                'account_email' => $account->email,
-                'account_name' => $account->display_name,
-                'total_count' => $items->count(),
-                'sent_count' => $items->where('status', 'sent')->count(),
-                'pending_count' => $items->where('status', 'pending')->count(),
-                'failed_count' => $items->whereIn('status', ['failed', 'retrying', 'bounced'])->count(),
-                'recipients' => $items->map(fn ($item) => [
-                    'email' => $item->recipient_email,
-                    'name' => $item->recipient_name,
-                    'status' => $item->status,
-                    'sent_at' => $item->sent_at?->toIso8601String(),
-                    'error_message' => $item->error_message,
-                ])->values()->toArray(),
-            ];
-        }
-
-        return response()->json([
-            'campaign_id' => $campaign->id,
-            'total_recipients' => $queueItems->count(),
-            'distribution_strategy' => $campaign->recipient_distribution,
-            'breakdown' => $breakdown,
-        ]);
-    }
-
     private function formatCampaign(BulkEmailCampaign $campaign): array
     {
         return [

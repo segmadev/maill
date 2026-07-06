@@ -552,6 +552,150 @@ class BulkCampaignController extends Controller
     }
 
     /**
+     * Get allocation breakdown for campaign
+     */
+    public function getAllocationBreakdown(int $id): JsonResponse
+    {
+        $campaign = BulkCampaign::findOrFail($id);
+        $campaignSettings = $campaign->campaign_settings ?? [];
+        $selectedAccounts = $campaignSettings['selectedAccounts'] ?? [];
+        $allocationStrategy = $campaignSettings['allocationStrategy'] ?? 'round-robin';
+        $customDistribution = $campaignSettings['customDistribution'] ?? null;
+
+        // Get recipients list
+        $recipients = $campaign->recipients ?? [];
+        $batchHistory = $campaign->batch_history ?? [];
+
+        // Group recipients by account
+        $breakdown = [];
+
+        if ($allocationStrategy === 'custom' && $customDistribution) {
+            // Custom distribution
+            $accountIndex = 0;
+            $emailCount = 0;
+            $emailsForAccount = (int)($customDistribution[$selectedAccounts[$accountIndex]] ?? 0);
+
+            foreach ($recipients as $recipient) {
+                $accountId = $selectedAccounts[$accountIndex];
+
+                if (!isset($breakdown[$accountId])) {
+                    $breakdown[$accountId] = [
+                        'account_id' => $accountId,
+                        'total_count' => 0,
+                        'sent_count' => 0,
+                        'pending_count' => 0,
+                        'failed_count' => 0,
+                        'recipients' => [],
+                    ];
+                }
+
+                // Find status in batch history
+                $status = 'pending';
+                $sentAt = null;
+                foreach ($batchHistory as $batch) {
+                    if (isset($batch['recipients']) && in_array($recipient, $batch['recipients'])) {
+                        $status = 'sent';
+                        $sentAt = $batch['sentAt'] ?? null;
+                        break;
+                    }
+                    if (isset($batch['failed']) && array_any($batch['failed'], fn($f) => $f['email'] === $recipient)) {
+                        $status = 'failed';
+                        break;
+                    }
+                }
+
+                $breakdown[$accountId]['total_count']++;
+                if ($status === 'sent') $breakdown[$accountId]['sent_count']++;
+                elseif ($status === 'failed') $breakdown[$accountId]['failed_count']++;
+                else $breakdown[$accountId]['pending_count']++;
+
+                $breakdown[$accountId]['recipients'][] = [
+                    'email' => $recipient,
+                    'name' => $recipient,
+                    'status' => $status,
+                    'sent_at' => $sentAt,
+                    'error_message' => null,
+                ];
+
+                $emailCount++;
+                if ($emailCount >= $emailsForAccount && $accountIndex < count($selectedAccounts) - 1) {
+                    $accountIndex++;
+                    $emailCount = 0;
+                    $emailsForAccount = (int)($customDistribution[$selectedAccounts[$accountIndex]] ?? 0);
+                }
+            }
+        } else {
+            // Round-robin, equal, or sequential
+            foreach ($recipients as $index => $recipient) {
+                $accountIndex = $index % count($selectedAccounts);
+                $accountId = $selectedAccounts[$accountIndex];
+
+                if (!isset($breakdown[$accountId])) {
+                    $breakdown[$accountId] = [
+                        'account_id' => $accountId,
+                        'total_count' => 0,
+                        'sent_count' => 0,
+                        'pending_count' => 0,
+                        'failed_count' => 0,
+                        'recipients' => [],
+                    ];
+                }
+
+                // Find status in batch history
+                $status = 'pending';
+                $sentAt = null;
+                foreach ($batchHistory as $batch) {
+                    if (isset($batch['recipients']) && in_array($recipient, $batch['recipients'])) {
+                        $status = 'sent';
+                        $sentAt = $batch['sentAt'] ?? null;
+                        break;
+                    }
+                    if (isset($batch['failed']) && array_any($batch['failed'], fn($f) => $f['email'] === $recipient)) {
+                        $status = 'failed';
+                        break;
+                    }
+                }
+
+                $breakdown[$accountId]['total_count']++;
+                if ($status === 'sent') $breakdown[$accountId]['sent_count']++;
+                elseif ($status === 'failed') $breakdown[$accountId]['failed_count']++;
+                else $breakdown[$accountId]['pending_count']++;
+
+                $breakdown[$accountId]['recipients'][] = [
+                    'email' => $recipient,
+                    'name' => $recipient,
+                    'status' => $status,
+                    'sent_at' => $sentAt,
+                    'error_message' => null,
+                ];
+            }
+        }
+
+        // Ensure all selected accounts are in breakdown
+        foreach ($selectedAccounts as $accountId) {
+            if (!isset($breakdown[$accountId])) {
+                $breakdown[$accountId] = [
+                    'account_id' => $accountId,
+                    'total_count' => 0,
+                    'sent_count' => 0,
+                    'pending_count' => 0,
+                    'failed_count' => 0,
+                    'recipients' => [],
+                ];
+            }
+        }
+
+        $breakdownArray = array_values($breakdown);
+
+        return response()->json([
+            'campaign_id' => $campaign->id,
+            'total_recipients' => count($recipients),
+            'distribution_strategy' => $allocationStrategy,
+            'breakdown' => $breakdownArray,
+        ]);
+    }
+
+    /**
      * Format campaign for API response
      */
     private function formatCampaign(BulkCampaign $campaign): array

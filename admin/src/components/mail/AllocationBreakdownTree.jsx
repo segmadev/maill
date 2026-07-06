@@ -14,9 +14,10 @@ export default function AllocationBreakdownTree({ campaignId }) {
     const fetchBreakdown = async () => {
       try {
         setLoading(true)
-        const response = await client.get(`/bulk-email-campaigns/${campaignId}/allocation-breakdown`)
+        const response = await client.get(`/admin/bulk-campaigns/${campaignId}/allocation-breakdown`)
         setData(response.data)
       } catch (err) {
+        console.error('Allocation breakdown error:', err)
         setError(err.message || 'Failed to load allocation breakdown')
       } finally {
         setLoading(false)
