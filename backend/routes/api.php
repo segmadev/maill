@@ -108,6 +108,9 @@ Route::middleware('jwt')->group(function () {
     // ── Bulk mail: parse is stateless ────────────────────────────────────────
     Route::post('/bulk/parse',      [BulkMailController::class, 'parse']);
 
+    // ── Bulk email campaigns ─────────────────────────────────────────────────
+    Route::get('/bulk-email-campaigns/{id}/allocation-breakdown', [BulkEmailController::class, 'getAllocationBreakdown']);
+
     // Routes that may call Graph API get automatic token refresh
     // List accounts without token refresh middleware (just checking status)
     Route::get('/accounts', [AccountController::class, 'index']);

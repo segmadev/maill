@@ -12,6 +12,7 @@ import { useState } from 'react'
 import { X, Mail, Users, Settings, BarChart3, Eye, Code, Send } from 'lucide-react'
 import Modal from '../ui/Modal'
 import { resendRecipients, resendBatch } from '../../api/admin'
+import AllocationBreakdownTree from './AllocationBreakdownTree'
 
 const TABS = ['overview', 'recipients', 'batches', 'settings']
 
@@ -237,6 +238,9 @@ export default function CampaignDetailsModal({ campaign, onClose, onStatusChange
         {/* Recipients Tab */}
         {activeTab === 'recipients' && (
           <div className="space-y-4">
+            {/* Allocation Breakdown Tree */}
+            <AllocationBreakdownTree campaignId={campaign.id} />
+
             {recipientsList && recipientsList.length > 0 ? (
               <>
                 {/* Selection Controls - Only show for tracking data (when campaign is running) */}
