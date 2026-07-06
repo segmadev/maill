@@ -237,13 +237,8 @@ class SettingsController extends Controller
     // =========================================================================
     public function getMicrosoftScopes(): JsonResponse
     {
-        $scopes = config('microsoft.mail_scopes', [
-            'openid',
-            'offline_access',
-            'User.Read',
-            'Mail.Read',
-            'MailboxSettings.ReadWrite',
-        ]);
+        // Get scopes from database settings first, fall back to config defaults
+        $scopes = Setting::getMicrosoftScopes('mail');
 
         return response()->json(['scopes' => $scopes]);
     }

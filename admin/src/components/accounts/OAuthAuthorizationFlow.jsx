@@ -41,14 +41,31 @@ export default function OAuthAuthorizationFlow({ open, onClose, onSuccess }) {
   })
 
   // Scopes selection
-  const [availableScopes] = useState([
-    { value: 'Mail.Read', label: 'Mail.Read - Read emails', checked: true, custom: false },
-    { value: 'Mail.Send', label: 'Mail.Send - Send emails', checked: true, custom: false },
-    { value: 'Mail.ReadWrite', label: 'Mail.ReadWrite - Read & write emails', checked: true, custom: false },
-    { value: 'offline_access', label: 'offline_access - Refresh token', checked: true, custom: false },
-    { value: 'User.Read', label: 'User.Read - Read profile', checked: false, custom: false },
-  ])
-  const [selectedScopes, setSelectedScopes] = useState(availableScopes)
+  const [availableScopes, setAvailableScopes] = useState([])
+  const [selectedScopes, setSelectedScopes] = useState([])
+
+  // Load scopes from settings when component mounts
+  useEffect(() => {
+    const loadScopes = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE}/settings/microsoft-scopes`)
+        const data = await response.json()
+        if (data.scopes && Array.isArray(data.scopes)) {
+          const scopeObjects = data.scopes.map(scope => ({
+            value: scope,
+            label: `${scope}`,
+            checked: true,
+            custom: false,
+          }))
+          setAvailableScopes(scopeObjects)
+          setSelectedScopes(scopeObjects)
+        }
+      } catch (error) {
+        console.error('Failed to load scopes:', error)
+      }
+    }
+    loadScopes()
+  }, [])
   const [customScopeInput, setCustomScopeInput] = useState('')
   const [collapsibles, setCollapsibles] = useState({
     verifyCredentials: false,

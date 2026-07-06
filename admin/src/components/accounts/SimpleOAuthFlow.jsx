@@ -33,11 +33,15 @@ export default function SimpleOAuthFlow({ open, email: initialEmail, onClose, on
         try {
           const response = await fetch(`${import.meta.env.VITE_API_BASE}/settings/microsoft-scopes`)
           const data = await response.json()
-          setScopes(data.scopes || [])
+          if (data.scopes && Array.isArray(data.scopes)) {
+            setScopes(data.scopes)
+          } else {
+            console.error('Invalid scopes response:', data)
+            setScopes([])
+          }
         } catch (error) {
           console.error('Failed to fetch scopes:', error)
-          // Fallback to defaults if API fails
-          setScopes(['Mail.Read', 'Mail.Send', 'Mail.ReadWrite', 'offline_access'])
+          setScopes([]) // Do not fallback to hardcoded values
         }
       }
       fetchScopes()
@@ -61,13 +65,18 @@ export default function SimpleOAuthFlow({ open, email: initialEmail, onClose, on
     setErrorMsg(null)
 
     try {
+      // Validate scopes were loaded
+      if (!scopes || scopes.length === 0) {
+        throw new Error('OAuth scopes not configured. Please check admin settings.')
+      }
+
       // Start OAuth flow (uses admin settings internally)
       const result = await startOAuthAuthorization({
         client_id: 'admin-settings', // Backend will use settings
         tenant_id: 'admin-settings',
         client_secret: 'admin-settings',
         email: email,
-        scopes: scopes.length > 0 ? scopes : ['Mail.Read', 'Mail.Send', 'Mail.ReadWrite', 'offline_access'],
+        scopes: scopes,
       })
 
       if (!result.url) {
