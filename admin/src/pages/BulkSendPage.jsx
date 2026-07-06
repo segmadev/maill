@@ -16,7 +16,7 @@ import toast from 'react-hot-toast'
 import AdminLayout from '../components/layout/AdminLayout'
 import {
   listBulkCampaigns, startBulkCampaign, pauseBulkCampaign,
-  cancelBulkCampaign, deleteBulkCampaign, getBulkCampaign,
+  cancelBulkCampaign, deleteBulkCampaign, getBulkCampaign, replayCampaign,
 } from '../api/admin'
 import BulkSendModal from '../components/mail/BulkSendModal'
 import CampaignDetailsModal from '../components/mail/CampaignDetailsModal'
@@ -229,6 +229,17 @@ export default function BulkSendPage() {
     }
   }
 
+  const handleReplay = async (campaign) => {
+    if (!window.confirm(`Replay campaign "${campaign.name}"? It will reset to draft status and resend to all ${campaign.total_recipients} recipients.`)) return
+    try {
+      const updated = await replayCampaign(campaign.id)
+      setCampaigns(campaigns.map(c => c.id === campaign.id ? updated.campaign : c))
+      toast.success('Campaign reset. Ready to send again!')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to replay campaign')
+    }
+  }
+
   const getStats = (campaign) => {
     const percentage = campaign.total_recipients > 0
       ? Math.round((campaign.processed_count / campaign.total_recipients) * 100)
@@ -392,6 +403,12 @@ export default function BulkSendPage() {
                       <button onClick={(e) => { e.stopPropagation(); handleCancel(campaign) }}
                         className="p-2 rounded-lg hover:bg-surface text-red-400 transition-colors" title="Cancel">
                         <X size={16} />
+                      </button>
+                    )}
+                    {['completed', 'cancelled', 'failed'].includes(campaign.status) && (
+                      <button onClick={(e) => { e.stopPropagation(); handleReplay(campaign) }}
+                        className="p-2 rounded-lg hover:bg-surface text-blue-400 transition-colors" title="Replay campaign">
+                        <RefreshCw size={16} />
                       </button>
                     )}
                     {!isActive && (

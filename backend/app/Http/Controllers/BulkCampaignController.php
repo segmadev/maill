@@ -501,4 +501,88 @@ class BulkCampaignController extends Controller
             ], 422);
         }
     }
+
+    /**
+     * POST /api/bulk-campaigns/{id}/replay
+     * Reset a completed campaign to draft status to resend
+     */
+    public function replay(Request $request, int $id): JsonResponse
+    {
+        $campaign = BulkCampaign::find($id);
+
+        if (!$campaign) {
+            return response()->json(['error' => 'not_found', 'message' => 'Campaign not found'], 404);
+        }
+
+        // Only allow replaying completed, cancelled, or paused campaigns
+        if (!in_array($campaign->status, ['completed', 'cancelled', 'paused', 'failed'])) {
+            return response()->json([
+                'error' => 'invalid_status',
+                'message' => "Cannot replay a campaign with status: {$campaign->status}",
+            ], 422);
+        }
+
+        try {
+            // Reset campaign to draft status
+            $campaign->update([
+                'status' => 'draft',
+                'started_at' => null,
+                'completed_at' => null,
+                'paused_at' => null,
+                'sent_count' => 0,
+                'failed_count' => 0,
+                'bounced_count' => 0,
+                'complaint_count' => 0,
+                'recipient_tracking' => null, // Clear tracking so it starts fresh
+            ]);
+
+            Log::info("Campaign {$campaign->id} replayed by user {$request->user()?->id}");
+
+            return response()->json([
+                'message' => 'Campaign reset to draft. Click "Start" to send again.',
+                'campaign' => $this->formatCampaign($campaign),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to replay campaign {$id}: {$e->getMessage()}");
+            return response()->json([
+                'error' => 'replay_failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Format campaign for API response
+     */
+    private function formatCampaign(BulkCampaign $campaign): array
+    {
+        return [
+            'id' => $campaign->id,
+            'name' => $campaign->name,
+            'status' => $campaign->status,
+            'subject' => $campaign->subject,
+            'body' => $campaign->body,
+            'html_body' => $campaign->html_body,
+            'recipient_count' => $campaign->recipient_count,
+            'total_recipients' => $campaign->recipient_count,
+            'sent_count' => $campaign->sent_count,
+            'failed_count' => $campaign->failed_count,
+            'bounced_count' => $campaign->bounced_count,
+            'complaint_count' => $campaign->complaint_count,
+            'processed_count' => $campaign->sent_count + $campaign->failed_count,
+            'importance_high' => $campaign->importance_high,
+            'config' => $campaign->config,
+            'account_ids' => $campaign->account_ids,
+            'selected_accounts' => $campaign->account_ids,
+            'recipient_distribution' => $campaign->recipient_distribution,
+            'ip_rotation_strategy' => $campaign->ip_rotation_strategy,
+            'ip_daily_limit' => $campaign->ip_daily_limit,
+            'ip_warmup_enabled' => $campaign->ip_warmup_enabled,
+            'reply_to_config' => $campaign->reply_to_config,
+            'started_at' => $campaign->started_at?->toIso8601String(),
+            'completed_at' => $campaign->completed_at?->toIso8601String(),
+            'created_at' => $campaign->created_at?->toIso8601String(),
+            'updated_at' => $campaign->updated_at?->toIso8601String(),
+        ];
+    }
 }

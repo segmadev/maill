@@ -208,6 +208,9 @@ export const resendRecipients = (id, data) =>
 export const resendBatch = (id, data) =>
   client.post(`/admin/bulk-campaigns/${id}/resend-batch`, data).then((r) => r.data)
 
+export const replayCampaign = (id) =>
+  client.post(`/admin/bulk-campaigns/${id}/replay`).then((r) => r.data)
+
 // ── Signature Management ──────────────────────────────────────────────────────
 export const listSignatureTemplates = () =>
   client.get('/admin/signature-templates').then((r) => r.data)

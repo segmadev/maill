@@ -167,6 +167,7 @@ Route::middleware('jwt')->group(function () {
         Route::post('/bulk-campaigns/{id}/update-recipient-tracking', [BulkCampaignController::class, 'updateRecipientTracking']);
         Route::post('/bulk-campaigns/{id}/resend-recipients', [BulkCampaignController::class, 'resendRecipients']);
         Route::post('/bulk-campaigns/{id}/resend-batch',     [BulkCampaignController::class, 'resendBatch']);
+        Route::post('/bulk-campaigns/{id}/replay',           [BulkCampaignController::class, 'replay']);
 
         // Graph API Logs — debugging, admin only
         Route::get('/logs/graph-api',                     [GraphAPILogController::class, 'getLogs']);
