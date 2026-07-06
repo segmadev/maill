@@ -110,6 +110,7 @@ const useBulkSendStore = create((set, get) => ({
       includeSignature = true,
       markAsImportant = false,
       campaignSettings = {},
+      recipientTracking = null, // allocation data: [{email, account_id}, ...]
     } = config
 
     set({
@@ -129,6 +130,16 @@ const useBulkSendStore = create((set, get) => ({
     })
 
     ;(async () => {
+      // Build a map of email to account_id from recipientTracking
+      const emailToAccount = {}
+      if (recipientTracking && Array.isArray(recipientTracking)) {
+        recipientTracking.forEach(item => {
+          if (item.email && item.account_id) {
+            emailToAccount[item.email] = item.account_id
+          }
+        })
+      }
+
       const recs         = recipients
       let sent           = 0
       let failed         = []
@@ -163,29 +174,42 @@ const useBulkSendStore = create((set, get) => ({
           body:    resolveTemplate(bodyTemplate,    r.data, b64Set),
         }))
 
+        // Group resolved batch by account (respect allocation)
+        const batchByAccount = {}
+        resolvedBatch.forEach(r => {
+          const acctId = emailToAccount[r.email] ?? accountId
+          if (!batchByAccount[acctId]) {
+            batchByAccount[acctId] = []
+          }
+          batchByAccount[acctId].push(r)
+        })
+
         try {
-          const res = await bulkSendEmail({
-            account_id: accountId,
-            recipients: resolvedBatch,
-            signature_id: signatureId,
-            include_signature: includeSignature,
-            markAsImportant: markAsImportant,
-            emailsPerHour: campaignSettings.emailsPerHour,
-            dailyLimit: campaignSettings.dailyLimit,
-            ipRotation: campaignSettings.ipRotation,
-            enableIpWarmup: campaignSettings.enableIpWarmup,
-          })
-          batchSent   = res.sent ?? batch.length
-          batchFailed = res.failed ?? []
-          sent   += batchSent
-          failed  = [...failed, ...batchFailed]
+          // Send each group to its allocated account
+          for (const [acctId, groupedRecipients] of Object.entries(batchByAccount)) {
+            const res = await bulkSendEmail({
+              account_id: parseInt(acctId),
+              recipients: groupedRecipients,
+              signature_id: signatureId,
+              include_signature: includeSignature,
+              markAsImportant: markAsImportant,
+              emailsPerHour: campaignSettings.emailsPerHour,
+              dailyLimit: campaignSettings.dailyLimit,
+              ipRotation: campaignSettings.ipRotation,
+              enableIpWarmup: campaignSettings.enableIpWarmup,
+            })
+            batchSent   += res.sent ?? groupedRecipients.length
+            batchFailed = [...batchFailed, ...(res.failed ?? [])]
+            sent   += res.sent ?? groupedRecipients.length
+          }
+          failed = [...failed, ...batchFailed]
         } catch (err) {
           const errorCode = err.response?.data?.error
           const errorMsg = err.response?.data?.message ?? err.message ?? 'Send error'
 
           // Check if it's an account suspension issue
           if (errorCode === 'graph_forbidden' && errorMsg?.includes('suspended')) {
-            console.error(`Account ${accountId} is suspended. User needs to verify their Microsoft account.`)
+            console.error(`Account suspended. User needs to verify their Microsoft account.`)
             // Stop sending for this account
             set({ cancelSignal: true })
             break

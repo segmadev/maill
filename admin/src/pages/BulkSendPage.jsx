@@ -110,74 +110,73 @@ export default function BulkSendPage() {
       console.log('Campaign data:', campaignData)
       console.log('Recipient tracking:', campaignData?.recipient_tracking)
 
-      // 3. Group recipients by account from recipient_tracking
-      const grouped = {}
+      // 3. Use recipient_tracking for allocation
+      let recipients = []
+      let recipientTracking = null
+
       if (campaignData?.recipient_tracking && campaignData.recipient_tracking.length > 0) {
-        campaignData.recipient_tracking.forEach(rec => {
-          if (!grouped[rec.account_id]) grouped[rec.account_id] = []
-          grouped[rec.account_id].push({
-            email: rec.email,
-            data: rec.data || {}
-          })
-        })
+        // Use the allocated tracking data
+        recipientTracking = campaignData.recipient_tracking
+        recipients = campaignData.recipients.map(r => ({
+          email: typeof r === 'string' ? r : r.email,
+          data: (typeof r === 'object' ? r.data : null) || {}
+        }))
       } else {
-        console.warn('No recipient_tracking found, falling back to recipients')
-        // Fallback: use selected_accounts with original recipients if allocation didn't work
+        console.warn('No recipient_tracking found, using single account fallback')
+        // Fallback: use first account
         const defaultAccountId = campaignData?.selected_accounts?.[0]
-        if (defaultAccountId && campaignData?.recipients) {
-          grouped[defaultAccountId] = campaignData.recipients.map(r => ({
+        recipients = campaignData.recipients.map(r => ({
+          email: typeof r === 'string' ? r : r.email,
+          data: (typeof r === 'object' ? r.data : null) || {}
+        }))
+        // Create fake tracking for fallback
+        if (defaultAccountId) {
+          recipientTracking = recipients.map(r => ({
             email: r.email,
-            data: r.data || {}
+            account_id: defaultAccountId,
+            data: r.data
           }))
         }
       }
 
-      // 4. Send per account sequentially
-      const store = useBulkSendStore.getState()
-      const accountIds = Object.keys(grouped).map(Number)
-
-      console.log('Account IDs:', accountIds)
-      console.log('Grouped data:', grouped)
-
-      if (accountIds.length === 0) {
-        toast.error('No recipients or accounts found')
+      if (!recipients || recipients.length === 0) {
+        toast.error('No recipients found')
         return
       }
 
-      for (const accountId of accountIds) {
-        const recipients = grouped[accountId]
-        console.log(`Starting send for account ${accountId} with ${recipients.length} recipients`)
+      // 4. Send all recipients with allocation data
+      const store = useBulkSendStore.getState()
+      console.log('Starting send with allocation:', recipientTracking?.length, 'recipients')
 
-        // Start sending for this account (fire-and-forget async)
-        store.startSending({
-          accountId,
-          subjectTemplate: campaignData.subject,
-          bodyTemplate: campaignData.body,
-          recipients,
-          batchSize: campaignData.campaign_settings?.batchSizeRange?.max || 50,
-          batchDelay: campaignData.campaign_settings?.batchDelayRange?.max || 2000,
-          base64Fields: campaignData.base64_fields || [],
-          campaignId: campaign.id,
-          signatureId: campaignData.campaign_settings?.signature_id,
-          includeSignature: campaignData.campaign_settings?.include_signature ?? true,
-          markAsImportant: campaignData.campaign_settings?.markAsImportant ?? false,
-          campaignSettings: campaignData.campaign_settings || {},
-        })
+      store.startSending({
+        accountId: campaignData?.selected_accounts?.[0], // primary account (may be unused if allocation is present)
+        subjectTemplate: campaignData.subject,
+        bodyTemplate: campaignData.body,
+        recipients,
+        batchSize: campaignData.campaign_settings?.batchSizeRange?.max || 50,
+        batchDelay: campaignData.campaign_settings?.batchDelayRange?.max || 2000,
+        base64Fields: campaignData.base64_fields || [],
+        campaignId: campaign.id,
+        signatureId: campaignData.campaign_settings?.signature_id,
+        includeSignature: campaignData.campaign_settings?.include_signature ?? true,
+        markAsImportant: campaignData.campaign_settings?.markAsImportant ?? false,
+        campaignSettings: campaignData.campaign_settings || {},
+        recipientTracking: recipientTracking, // Pass allocation data
+      })
 
-        // Wait for this account to finish before starting next
-        await new Promise(resolve => {
-          const checkStatus = () => {
-            const state = useBulkSendStore.getState()
-            if (state.status === 'done' || state.status === 'cancelled') {
-              console.log(`Finished sending for account ${accountId}`)
-              resolve()
-            } else {
-              setTimeout(checkStatus, 500)
-            }
+      // Wait for sending to complete
+      await new Promise(resolve => {
+        const checkStatus = () => {
+          const state = useBulkSendStore.getState()
+          if (state.status === 'done' || state.status === 'cancelled') {
+            console.log('Campaign sending completed')
+            resolve()
+          } else {
+            setTimeout(checkStatus, 500)
           }
-          checkStatus()
-        })
-      }
+        }
+        checkStatus()
+      })
     } catch (err) {
       console.error('Error starting campaign:', err)
 
