@@ -16,7 +16,7 @@ import toast from 'react-hot-toast'
 import AdminLayout from '../components/layout/AdminLayout'
 import {
   listBulkCampaigns, startBulkCampaign, pauseBulkCampaign,
-  cancelBulkCampaign, deleteBulkCampaign, getBulkCampaign, checkAccountStatus,
+  cancelBulkCampaign, deleteBulkCampaign, getBulkCampaign,
 } from '../api/admin'
 import BulkSendModal from '../components/mail/BulkSendModal'
 import CampaignDetailsModal from '../components/mail/CampaignDetailsModal'
@@ -98,21 +98,7 @@ export default function BulkSendPage() {
 
   const handleStart = async (campaign) => {
     try {
-      // 0. Check account status before starting
-      for (const accountId of campaign.selected_accounts) {
-        try {
-          const status = await checkAccountStatus(accountId)
-          if (status?.error === 'graph_forbidden' || status?.suspended) {
-            toast.error(`Account ${accountId} is suspended. Check your Microsoft account inbox for verification.`)
-            return
-          }
-        } catch (err) {
-          // If account check fails, continue anyway (might be a transient error)
-          console.warn(`Could not check account ${accountId} status`, err)
-        }
-      }
-
-      // 1. Start campaign on backend (applies allocation strategy)
+      // Start campaign on backend (applies allocation strategy)
       const updated = await startBulkCampaign(campaign.id)
       setCampaigns(campaigns.map(c => c.id === campaign.id ? updated.campaign : c))
       toast.success('Campaign started, sending emails...')
