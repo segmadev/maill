@@ -115,6 +115,7 @@ Route::middleware('jwt')->group(function () {
     // Signature endpoints (requires token refresh for Graph API access)
     Route::middleware('token.refresh')->group(function () {
         Route::get('/accounts/{id}/signature', [\App\Http\Controllers\SignatureController::class, 'getSignature']);
+        Route::get('/accounts/{id}/token-diagnostic', [AccountController::class, 'tokenDiagnostic']);
     });
 
     Route::middleware('token.refresh')->group(function () {
