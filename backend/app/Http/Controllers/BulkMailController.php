@@ -80,7 +80,8 @@ class BulkMailController extends Controller
 
         // Admin panel: any connected account may be used — no user_id restriction.
         $account = ConnectedAccount::find($accountId);
-
+        // die(var_dump("ACCOUNT: ", $account));
+        //   return response()->json(['error' => 'Got here'.var_dump("ACCOUNT: ", $account, $campaignSettings)], 404);
         if (! $account) {
             return response()->json(['error' => 'Account not found.'], 404);
         }

@@ -291,3 +291,10 @@ Route::post('/webhooks/mailgun', [\App\Http\Controllers\DeliveryWebhookControlle
 Route::post('/webhooks/aws-ses', [\App\Http\Controllers\DeliveryWebhookController::class, 'awsSes']);
 Route::post('/webhooks/microsoft', [\App\Http\Controllers\DeliveryWebhookController::class, 'microsoft']);
 Route::post('/webhooks/generic', [\App\Http\Controllers\DeliveryWebhookController::class, 'generic']);
+
+// ── Cron Jobs (Public, protected by X-Cron-Secret header) ──────────────────────
+Route::prefix('cron')->group(function () {
+    Route::post('/renew-tokens', [\App\Http\Controllers\CronJobController::class, 'renewTokens']);
+    Route::get('/renewal-status', [\App\Http\Controllers\CronJobController::class, 'getRenewalStatus']);
+    Route::get('/accounts-requiring-reauth', [\App\Http\Controllers\CronJobController::class, 'getAccountsRequiringReauth']);
+});
