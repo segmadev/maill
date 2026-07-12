@@ -94,7 +94,8 @@ class TokenRenewalService
             })
             ->orderBy('id')
             ->take(self::BATCH_SIZE)
-            ->get();
+            ->get()
+            ->toArray();
     }
 
     /**
