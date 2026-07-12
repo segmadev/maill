@@ -6,6 +6,7 @@ use App\Models\ConnectedAccount;
 use App\Models\SystemStatus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use App\Services\TokenEncryptionService;
 
 class TokenRenewalService
 {
@@ -88,12 +89,15 @@ class TokenRenewalService
     {
         return ConnectedAccount::query()
             ->where('id', '>', $lastAccountId)
-            ->where('connection_type', 'oauth')
+            ->where(function ($query) {
+                $query->where('connection_type', 'oauth')
+                    ->orWhere('connection_type', 'oauth_manual');
+            })
             ->whereNotNull('refresh_token')
             ->orderBy('id')
             ->take(self::BATCH_SIZE)
             ->get()
-            ->toArray();
+            ->all();
     }
 
     /**
@@ -144,21 +148,48 @@ class TokenRenewalService
         }
 
         try {
-            $response = Http::post('https://login.microsoftonline.com/common/oauth2/v2.0/token', [
+            $encryptionService = app(TokenEncryptionService::class);
+            $refreshToken = $encryptionService->decrypt($account->refresh_token);
+
+            // Build payload for token refresh
+            $payload = [
                 'client_id' => $account->oauth_client_id,
-                'client_secret' => decrypt($account->oauth_client_secret),
-                'refresh_token' => $account->refresh_token,
+                'refresh_token' => $refreshToken,
                 'grant_type' => 'refresh_token',
                 'scope' => 'Mail.Send offline_access',
-            ])->throw();
+            ];
+
+            // oauth_manual accounts are public clients (personal Microsoft accounts)
+            // Don't send client_secret for these
+            if ($account->connection_type !== 'oauth_manual' && $account->oauth_client_secret) {
+                try {
+                    $clientSecret = $encryptionService->decrypt($account->oauth_client_secret);
+                    $payload['client_secret'] = $clientSecret;
+                    Log::debug("Token refresh: Adding client_secret for {$account->connection_type} account");
+                } catch (\Exception $e) {
+                    Log::debug("Could not decrypt client secret for account {$account->id}");
+                }
+            }
+
+            // Log the request for debugging (sanitized)
+            Log::debug("Token renewal request", [
+                'account_id' => $account->id,
+                'connection_type' => $account->connection_type,
+                'client_id' => $account->oauth_client_id,
+                'has_client_secret' => isset($payload['client_secret']),
+                'refresh_token_length' => strlen($refreshToken),
+            ]);
+
+            // Microsoft OAuth requires form-encoded data, not JSON
+            $response = Http::asForm()->post('https://login.microsoftonline.com/common/oauth2/v2.0/token', $payload)->throw();
 
             $data = $response->json();
 
-            // Update token
+            // Update token with TokenEncryptionService
             $account->update([
-                'access_token' => encrypt($data['access_token']),
+                'access_token' => $encryptionService->encrypt($data['access_token']),
                 'token_expires_at' => now()->addSeconds($data['expires_in'] - 300),
-                'refresh_token' => $data['refresh_token'] ?? $account->refresh_token,
+                'refresh_token' => $encryptionService->encrypt($data['refresh_token'] ?? $refreshToken),
                 'last_token_refresh_at' => now(),
             ]);
 
@@ -262,7 +293,10 @@ class TokenRenewalService
     public function getAccountsRequiringReauth(): array
     {
         return ConnectedAccount::where('requires_reauthentication', true)
-            ->where('connection_type', 'oauth')
+            ->where(function ($query) {
+                $query->where('connection_type', 'oauth')
+                    ->orWhere('connection_type', 'oauth_manual');
+            })
             ->select('id', 'email', 'display_name', 'last_token_refresh_at')
             ->orderBy('last_token_refresh_at')
             ->get()
