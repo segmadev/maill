@@ -1,12 +1,12 @@
 # Token Renewal Cron Job Setup Guide
 
 ## Overview
-This system automatically renews OAuth tokens for all connected accounts before they expire. It processes accounts in batches to handle large-scale deployments efficiently.
+This system automatically renews **ALL** OAuth tokens for connected accounts, regardless of expiry time. It processes accounts in continuous batches to handle large-scale deployments efficiently.
 
 ## How It Works
-1. **Batching**: Processes 50 accounts at a time
-2. **Loop Processing**: Continues through all accounts, then restarts
-3. **Renewal Buffer**: Renews tokens 30 minutes before expiry
+1. **Continuous Renewal**: Renews ALL tokens on every cycle, not just expiring ones
+2. **Batching**: Processes 50 accounts at a time
+3. **Loop Processing**: Continues through all accounts, then restarts from the beginning
 4. **Progress Tracking**: Saves progress to database between batches
 5. **Failure Handling**: Marks accounts requiring re-authentication
 
@@ -175,28 +175,33 @@ SELECT * FROM system_status WHERE key = 'token_renewal_progress';
 
 ## Recommended Schedule
 
-**For optimal token renewal:**
-- **Every 5 minutes**: Safest, ensures no token expires
-  - Handles up to 600 accounts per hour (50 accounts × 12 cycles)
+**For continuous token renewal of ALL accounts:**
+- **Every 5 minutes**: Renews tokens most frequently
+  - Processes 50 accounts per call = 600 accounts/hour (10 cycles × 50)
+  - All accounts renewed every ~100 min (for 1000 accounts)
   
-- **Every 10 minutes**: Good balance
-  - Handles up to 300 accounts per hour (50 accounts × 6 cycles)
+- **Every 10 minutes**: Standard recommended interval
+  - Processes 50 accounts per call = 300 accounts/hour (6 cycles × 50)
+  - All accounts renewed every ~200 min (for 1000 accounts)
 
-**Example timeline for 1000 accounts:**
-- At 5-min intervals: All 1000 accounts renewed in ~100 minutes
-- At 10-min intervals: All 1000 accounts renewed in ~200 minutes
+**Example timeline for 1000 accounts (10-min intervals):**
+- Cycle 1: Renew accounts 1-50 (10 min)
+- Cycle 2: Renew accounts 51-100 (20 min)
+- Cycle 3: Renew accounts 101-150 (30 min)
+- ...
+- Cycle 20: Renew accounts 951-1000 (200 min)
+- Cycle 21: Reset → Renew accounts 1-50 again (210 min)
 
 ## How Renewal Works
 
 1. **Every execution**:
    - Check if renewal cycle is complete
-   - If complete, reset and start new cycle
-   - Get next 50 accounts that need renewal
+   - If complete, reset and start new cycle from account 1
+   - Get next 50 OAuth accounts (regardless of token expiry)
    - Renew their tokens
    - Save progress
 
 2. **For each account**:
-   - Check if token expires within 30 minutes
    - Call Microsoft OAuth refresh endpoint
    - Update token and expiry time
    - If refresh fails (invalid_grant), mark for re-authentication
@@ -205,6 +210,7 @@ SELECT * FROM system_status WHERE key = 'token_renewal_progress';
    - Last processed account ID saved
    - Total count updated
    - Cycle completion flag set when all accounts done
+   - Then automatically restarts from beginning
 
 ## Security Considerations
 

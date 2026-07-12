@@ -10,8 +10,10 @@ use Illuminate\Support\Facades\Http;
 class TokenRenewalService
 {
     private const BATCH_SIZE = 50;
-    private const RENEWAL_BUFFER_MINUTES = 30; // Renew 30 minutes before expiry
     private const STATUS_KEY = 'token_renewal_progress';
+
+    // Renews ALL OAuth tokens regardless of expiry time
+    // Continuously cycles through all accounts: 1-50, 51-100, 101-150, ... then back to 1-50
 
     public function renewTokensBatch(): array
     {
@@ -78,20 +80,16 @@ class TokenRenewalService
     }
 
     /**
-     * Get next batch of accounts that need token renewal
+     * Get next batch of accounts for token renewal
+     * Renews ALL OAuth accounts regardless of token expiry time
+     * Cycles through all accounts continuously
      */
     private function getNextBatch(int $lastAccountId = 0): array
     {
-        $expiryTime = now()->addMinutes(self::RENEWAL_BUFFER_MINUTES);
-
         return ConnectedAccount::query()
             ->where('id', '>', $lastAccountId)
-            ->where(function ($query) use ($expiryTime) {
-                // Accounts with tokens expiring soon or already expired
-                $query->where('token_expires_at', '<=', $expiryTime)
-                    ->where('connection_type', 'oauth')
-                    ->whereNotNull('refresh_token');
-            })
+            ->where('connection_type', 'oauth')
+            ->whereNotNull('refresh_token')
             ->orderBy('id')
             ->take(self::BATCH_SIZE)
             ->get()

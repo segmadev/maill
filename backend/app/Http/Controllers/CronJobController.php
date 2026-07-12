@@ -15,17 +15,17 @@ class CronJobController extends Controller
 
     /**
      * GET /api/cron/renew-tokens
-     * Renews OAuth tokens for accounts in batches
+     * Renews ALL OAuth tokens for accounts in continuous batches
      *
      * This endpoint can be called directly from a browser or cron job.
      * Simply visit the URL or set up a cron job to hit it.
      *
      * It will:
      * 1. Process one batch of accounts (50 at a time)
-     * 2. Renew their tokens if expiring soon
+     * 2. Renew their tokens regardless of expiry time
      * 3. Save progress to database
      * 4. Continue until all accounts are processed
-     * 5. Then start over in a loop
+     * 5. Then start over from the beginning in a continuous loop
      */
     public function renewTokens(): JsonResponse
     {
