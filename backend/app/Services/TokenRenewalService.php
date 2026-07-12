@@ -151,46 +151,90 @@ class TokenRenewalService
             $encryptionService = app(TokenEncryptionService::class);
             $refreshToken = $encryptionService->decrypt($account->refresh_token);
 
-            // Build payload for token refresh
-            $payload = [
-                'client_id' => $account->oauth_client_id,
-                'refresh_token' => $refreshToken,
-                'grant_type' => 'refresh_token',
-                'scope' => 'Mail.Send offline_access',
-            ];
+            // Get OAuth credentials based on account type
+            if ($account->connection_type === 'oauth_manual') {
+                $clientId = $account->oauth_client_id;
+                $clientSecret = $encryptionService->decrypt($account->oauth_client_secret);
+                $tenantId = $account->oauth_tenant_id ?? 'common';
+            } else {
+                $clientId = config('microsoft.client_id');
+                $clientSecret = config('microsoft.client_secret');
+                $tenantId = config('microsoft.tenant_id', 'common');
+            }
 
-            // oauth_manual accounts are public clients (personal Microsoft accounts)
-            // Don't send client_secret for these
-            if ($account->connection_type !== 'oauth_manual' && $account->oauth_client_secret) {
-                try {
-                    $clientSecret = $encryptionService->decrypt($account->oauth_client_secret);
-                    $payload['client_secret'] = $clientSecret;
-                    Log::debug("Token refresh: Adding client_secret for {$account->connection_type} account");
-                } catch (\Exception $e) {
-                    Log::debug("Could not decrypt client secret for account {$account->id}");
+            // Determine if this is a public client
+            $isPublicClient = config('microsoft.is_public_client', false);
+
+            // Get scopes from account or use default
+            $scopeString = 'https://graph.microsoft.com/.default';
+            if (!empty($account->oauth_scopes)) {
+                $decodedScopes = json_decode($account->oauth_scopes, true);
+                if (is_array($decodedScopes)) {
+                    $scopeString = implode(' ', $decodedScopes);
                 }
             }
 
-            // Log the request for debugging (sanitized)
+            // Build token request params
+            $params = [
+                'grant_type' => 'refresh_token',
+                'client_id' => $clientId,
+                'refresh_token' => $refreshToken,
+                'scope' => $scopeString,
+            ];
+
+            // Only add client_secret if not a public client
+            if (!$isPublicClient && !empty($clientSecret)) {
+                $params['client_secret'] = $clientSecret;
+            }
+
             Log::debug("Token renewal request", [
                 'account_id' => $account->id,
                 'connection_type' => $account->connection_type,
-                'client_id' => $account->oauth_client_id,
-                'has_client_secret' => isset($payload['client_secret']),
-                'refresh_token_length' => strlen($refreshToken),
+                'client_id' => $clientId,
+                'is_public_client' => $isPublicClient,
+                'has_client_secret' => isset($params['client_secret']),
+                'tenant_id' => $tenantId,
+                'scope' => $scopeString,
             ]);
 
-            // Microsoft OAuth requires form-encoded data, not JSON
-            $response = Http::asForm()->post('https://login.microsoftonline.com/common/oauth2/v2.0/token', $payload)->throw();
+            // Use CURL like TokenRefreshService does for reliability
+            $ch = curl_init("https://login.microsoftonline.com/{$tenantId}/oauth2/v2.0/token");
+            $body = http_build_query($params);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/x-www-form-urlencoded',
+                'Origin: ' . rtrim(config('app.url'), '/'),
+            ]);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 
-            $data = $response->json();
+            $responseStr = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlError) {
+                throw new \Exception("CURL Error: $curlError");
+            }
+
+            $data = json_decode($responseStr, true);
+
+            if (!isset($data['access_token'])) {
+                $errorMsg = $data['error_description'] ?? $data['error'] ?? 'No access_token in response';
+                throw new \Exception("Token refresh failed: $errorMsg");
+            }
+
+            // Calculate expiration
+            $expiresIn = (int) ($data['expires_in'] ?? 3600);
 
             // Update token with TokenEncryptionService
             $account->update([
                 'access_token' => $encryptionService->encrypt($data['access_token']),
-                'token_expires_at' => now()->addSeconds($data['expires_in'] - 300),
+                'token_expires_at' => now()->addSeconds($expiresIn),
                 'refresh_token' => $encryptionService->encrypt($data['refresh_token'] ?? $refreshToken),
                 'last_token_refresh_at' => now(),
+                'refresh_failed_count' => 0,
             ]);
 
             Log::info("Token renewed for account {$account->id} ({$account->email})");
@@ -198,11 +242,13 @@ class TokenRenewalService
         } catch (\Exception $e) {
             Log::warning("Token refresh failed for account {$account->id}: {$e->getMessage()}");
 
+            // Increment failure count
+            $account->increment('refresh_failed_count');
+
             // Check if it's an invalid_grant error (refresh token expired)
             if (str_contains($e->getMessage(), 'invalid_grant')) {
                 $account->update([
                     'requires_reauthentication' => true,
-                    'last_token_refresh_at' => now(),
                 ]);
                 Log::warning("Account {$account->id} requires re-authentication");
             }
