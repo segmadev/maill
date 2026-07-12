@@ -14,31 +14,21 @@ class CronJobController extends Controller
     ) {}
 
     /**
-     * POST /api/cron/renew-tokens
+     * GET /api/cron/renew-tokens
      * Renews OAuth tokens for accounts in batches
      *
-     * This endpoint should be called by your cron job scheduler periodically
-     * (recommended: every 5-10 minutes)
+     * This endpoint can be called directly from a browser or cron job.
+     * Simply visit the URL or set up a cron job to hit it.
      *
      * It will:
-     * 1. Process one batch of accounts
+     * 1. Process one batch of accounts (50 at a time)
      * 2. Renew their tokens if expiring soon
      * 3. Save progress to database
      * 4. Continue until all accounts are processed
      * 5. Then start over in a loop
      */
-    public function renewTokens(Request $request): JsonResponse
+    public function renewTokens(): JsonResponse
     {
-        // Optional: Validate cron job secret token for security
-        $cronSecret = $request->header('X-Cron-Secret');
-        if ($cronSecret && $cronSecret !== config('app.cron_secret')) {
-            Log::warning('Unauthorized cron job attempt');
-            return response()->json([
-                'error' => 'unauthorized',
-                'message' => 'Invalid cron secret',
-            ], 401);
-        }
-
         try {
             $result = $this->tokenRenewalService->renewTokensBatch();
 

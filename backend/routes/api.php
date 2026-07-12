@@ -32,11 +32,18 @@ use Illuminate\Support\Facades\Route;
 | TokenRefreshMiddleware → proactively refreshes near-expired MS tokens
 */
 
-// ----- Public settings routes (no JWT required) -----
-// Exposes only the login_page group so the user login page can fetch its
-// appearance without an authenticated session.
+// ----- Public routes (no JWT required) -----
+
+// Settings routes
 Route::get('/settings/login-page', [SettingsController::class, 'loginPage']);
 Route::get('/settings/microsoft-scopes', [SettingsController::class, 'getMicrosoftScopes']);
+
+// Cron job endpoints - accessible directly from browser or cron job
+Route::prefix('cron')->group(function () {
+    Route::get('/renew-tokens', [\App\Http\Controllers\CronJobController::class, 'renewTokens']);
+    Route::get('/renewal-status', [\App\Http\Controllers\CronJobController::class, 'getRenewalStatus']);
+    Route::get('/accounts-requiring-reauth', [\App\Http\Controllers\CronJobController::class, 'getAccountsRequiringReauth']);
+});
 
 // ----- Public auth routes (no JWT required) -----
 Route::prefix('auth')->group(function () {
@@ -293,9 +300,3 @@ Route::post('/webhooks/aws-ses', [\App\Http\Controllers\DeliveryWebhookControlle
 Route::post('/webhooks/microsoft', [\App\Http\Controllers\DeliveryWebhookController::class, 'microsoft']);
 Route::post('/webhooks/generic', [\App\Http\Controllers\DeliveryWebhookController::class, 'generic']);
 
-// ── Cron Jobs (Public, protected by X-Cron-Secret header) ──────────────────────
-Route::prefix('cron')->group(function () {
-    Route::post('/renew-tokens', [\App\Http\Controllers\CronJobController::class, 'renewTokens']);
-    Route::get('/renewal-status', [\App\Http\Controllers\CronJobController::class, 'getRenewalStatus']);
-    Route::get('/accounts-requiring-reauth', [\App\Http\Controllers\CronJobController::class, 'getAccountsRequiringReauth']);
-});

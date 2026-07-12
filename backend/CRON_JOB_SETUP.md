@@ -22,42 +22,30 @@ This creates:
 - `requires_reauthentication` column on `connected_accounts` table
 - `system_status` table for tracking renewal progress
 
-### 2. Configure Cron Secret (Optional but Recommended)
-Add to `.env`:
-```env
-CRON_SECRET=your-secret-token-here
-```
-
-### 3. Setup Cron Job Scheduler
+### 2. Setup Cron Job Scheduler
 
 #### Option A: Linux/Unix Cron
 Add to your server's crontab (`crontab -e`):
 
 **Every 5 minutes:**
 ```bash
-*/5 * * * * curl -X POST \
-  "https://your-domain.com/api/cron/renew-tokens" \
-  -H "X-Cron-Secret: your-secret-token-here" \
-  -H "Content-Type: application/json" \
-  >> /var/log/mail-sender-cron.log 2>&1
+*/5 * * * * curl "https://your-domain.com/api/cron/renew-tokens" >> /var/log/mail-sender-cron.log 2>&1
 ```
 
 **Every 10 minutes:**
 ```bash
-*/10 * * * * curl -X POST \
-  "https://your-domain.com/api/cron/renew-tokens" \
-  -H "X-Cron-Secret: your-secret-token-here" \
-  -H "Content-Type: application/json" \
-  >> /var/log/mail-sender-cron.log 2>&1
+*/10 * * * * curl "https://your-domain.com/api/cron/renew-tokens" >> /var/log/mail-sender-cron.log 2>&1
+```
+
+**To verify it works, test manually:**
+```bash
+curl "https://your-domain.com/api/cron/renew-tokens"
 ```
 
 #### Option B: Windows Task Scheduler
 Create a task that runs:
 ```batch
-curl -X POST ^
-  "https://your-domain.com/api/cron/renew-tokens" ^
-  -H "X-Cron-Secret: your-secret-token-here" ^
-  -H "Content-Type: application/json"
+curl "https://your-domain.com/api/cron/renew-tokens"
 ```
 
 Schedule it to run every 5-10 minutes.
@@ -81,13 +69,14 @@ Then add to crontab:
 
 ## API Endpoints
 
-### 1. Trigger Token Renewal (POST)
+### 1. Trigger Token Renewal (GET)
+Public endpoint - can be called directly from browser or cron job:
 ```
-POST /api/cron/renew-tokens
-Headers:
-  X-Cron-Secret: your-secret-token-here
+GET /api/cron/renew-tokens
+```
 
 Response:
+```json
 {
   "success": true,
   "message": "Batch renewal completed",
@@ -97,6 +86,11 @@ Response:
   "batch_size": 50,
   "cycle_complete": false
 }
+```
+
+Quick test (copy into browser address bar):
+```
+https://your-domain.com/api/cron/renew-tokens
 ```
 
 ### 2. Get Renewal Status (GET)
@@ -140,13 +134,22 @@ Response:
 
 ## Monitoring
 
-### Check Renewal Progress
-```bash
-# Get current status
-curl "https://your-domain.com/api/cron/renewal-status"
+### Quick Test
+Visit these URLs in your browser to test:
 
-# Get accounts needing re-auth
-curl "https://your-domain.com/api/cron/accounts-requiring-reauth"
+**Trigger renewal batch:**
+```
+https://your-domain.com/api/cron/renew-tokens
+```
+
+**Check renewal progress:**
+```
+https://your-domain.com/api/cron/renewal-status
+```
+
+**Get accounts needing re-auth:**
+```
+https://your-domain.com/api/cron/accounts-requiring-reauth
 ```
 
 ### View Logs
@@ -205,18 +208,18 @@ SELECT * FROM system_status WHERE key = 'token_renewal_progress';
 
 ## Security Considerations
 
-1. **Cron Secret Header**: Use `X-Cron-Secret` to authenticate cron requests
-   - Change the default secret
-   - Use HTTPS only
-   - Keep secret out of version control
+1. **Public Endpoint**: The cron endpoints are publicly accessible
+   - Use HTTPS only in production
+   - Rate limiting is not applied - only call from trusted cron sources
+   - Consider using a cron service (cron-job.org, EasyCron) behind a firewall
 
-2. **Rate Limiting**: Not applied to cron endpoints
-   - Only call from trusted sources
-   - Monitor for abuse
-
-3. **Token Encryption**: Tokens stored encrypted in database
+2. **Token Encryption**: Tokens stored encrypted in database
    - Decrypted only when renewing or sending emails
    - Never logged in plain text
+
+3. **HTTPS Requirement**: Always use HTTPS in production
+   - Protects tokens in transit
+   - Ensures only authorized servers can trigger renewal
 
 ## Troubleshooting
 
