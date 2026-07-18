@@ -100,6 +100,11 @@ class CronJobController extends Controller
      * - force=true: Clear ALL logs regardless of size
      * - force=false: Skip clearing, just report status
      * - no parameter: Clear only logs > 50MB (default)
+     *
+     * Clears:
+     * - *.log files in storage/logs
+     * - *.log files in storage/logs subdirectories
+     * - laravel-YYYY-MM-DD.log rotated files
      */
     public function clearLargeLogs(Request $request): JsonResponse
     {
@@ -132,9 +137,21 @@ class CronJobController extends Controller
                 ], 500);
             }
 
-            $files = glob($logPath . '/*.log');
+            // Get all log files: both in root and subdirectories
+            $files = array_merge(
+                glob($logPath . '/*.log'),                    // Root level: *.log
+                glob($logPath . '/laravel-*.log'),            // Rotated: laravel-YYYY-MM-DD.log
+                glob($logPath . '/**/*.log', GLOB_BRACE)      // Subdirectories: */*.log
+            );
+
+            // Remove duplicates
+            $files = array_unique($files);
 
             foreach ($files as $file) {
+                if (!is_file($file)) {
+                    continue; // Skip if not a file (e.g., directory)
+                }
+
                 $fileSize = filesize($file);
 
                 // Clear if: force=true (all files) OR fileSize > threshold
@@ -145,13 +162,17 @@ class CronJobController extends Controller
                         file_put_contents($file, '');
                         $clearedCount++;
                         $totalFreed += $fileSize;
+
+                        // Get relative path from logs directory
+                        $relativePath = str_replace($logPath . '/', '', $file);
+
                         $clearedFiles[] = [
-                            'file' => basename($file),
+                            'file' => $relativePath,
                             'size_mb' => $fileSizeMB,
                         ];
 
                         $reason = $force === 'true' ? 'force=true' : "exceeded {$maxSizeMB}MB";
-                        Log::warning("Log file cleared via API: $file ({$reason}, was {$fileSizeMB}MB)");
+                        Log::warning("Log file cleared via API: $relativePath ({$reason}, was {$fileSizeMB}MB)");
                     } catch (\Exception $e) {
                         Log::error("Failed to clear log file $file: " . $e->getMessage());
                     }
