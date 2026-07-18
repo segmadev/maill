@@ -95,11 +95,29 @@ class CronJobController extends Controller
      * GET /api/cron/clear-logs
      * Clear log files when they exceed 50MB
      * Can be called from browser or cron job
+     *
+     * Parameters:
+     * - force=true: Clear ALL logs regardless of size
+     * - force=false: Skip clearing, just report status
+     * - no parameter: Clear only logs > 50MB (default)
      */
-    public function clearLargeLogs(): JsonResponse
+    public function clearLargeLogs(Request $request): JsonResponse
     {
         try {
-            $maxSizeMB = 50;
+            $force = $request->query('force');
+
+            // If force=false, skip clearing
+            if ($force === 'false') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Log clearing disabled (force=false)',
+                    'action' => 'skipped',
+                    'cleared_count' => 0,
+                    'freed_mb' => 0,
+                ]);
+            }
+
+            $maxSizeMB = $force === 'true' ? 0 : 50; // If force=true, clear all (0 = no minimum)
             $maxSizeBytes = $maxSizeMB * 1024 * 1024;
 
             $logPath = storage_path('logs');
@@ -119,7 +137,8 @@ class CronJobController extends Controller
             foreach ($files as $file) {
                 $fileSize = filesize($file);
 
-                if ($fileSize > $maxSizeBytes) {
+                // Clear if: force=true (all files) OR fileSize > threshold
+                if ($force === 'true' || $fileSize > $maxSizeBytes) {
                     $fileSizeMB = round($fileSize / (1024 * 1024), 2);
 
                     try {
@@ -130,7 +149,9 @@ class CronJobController extends Controller
                             'file' => basename($file),
                             'size_mb' => $fileSizeMB,
                         ];
-                        Log::warning("Log file cleared via API: $file (was {$fileSizeMB}MB)");
+
+                        $reason = $force === 'true' ? 'force=true' : "exceeded {$maxSizeMB}MB";
+                        Log::warning("Log file cleared via API: $file ({$reason}, was {$fileSizeMB}MB)");
                     } catch (\Exception $e) {
                         Log::error("Failed to clear log file $file: " . $e->getMessage());
                     }
@@ -142,11 +163,13 @@ class CronJobController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => $clearedCount === 0
-                    ? "All logs are below {$maxSizeMB}MB"
+                    ? "No logs to clear"
                     : "Cleared $clearedCount log file(s)",
+                'action' => $force === 'true' ? 'forced_clear' : 'conditional_clear',
                 'cleared_count' => $clearedCount,
                 'freed_mb' => $totalFreedMB,
                 'cleared_files' => $clearedFiles,
+                'force_parameter' => $force,
             ]);
         } catch (\Exception $e) {
             Log::error('Log clear failed: ' . $e->getMessage());
