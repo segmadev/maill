@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\TokenRenewalService;
+use App\Services\SafeTokenRenewalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 class CronJobController extends Controller
 {
     public function __construct(
-        private TokenRenewalService $tokenRenewalService,
+        private SafeTokenRenewalService $tokenRenewalService,
     ) {}
 
     /**
@@ -30,14 +30,18 @@ class CronJobController extends Controller
     public function renewTokens(): JsonResponse
     {
         try {
-            $result = $this->tokenRenewalService->renewTokensBatch();
+            $result = $this->tokenRenewalService->renewTokensBatchSafe();
 
-            $statusCode = $result['success'] ? 200 : 500;
-            Log::info('Cron token renewal: ' . json_encode($result));
+            $statusCode = $result['success'] ? 200 : ($result['status'] === 'already_running' ? 429 : 500);
+            Log::info('Cron token renewal executed', $result);
 
             return response()->json($result, $statusCode);
-        } catch (\Exception $e) {
-            Log::error('Cron job error: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('Cron job fatal error: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             return response()->json([
                 'error' => 'cron_failed',
                 'message' => $e->getMessage(),

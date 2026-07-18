@@ -38,6 +38,13 @@ use Illuminate\Support\Facades\Route;
 Route::get('/settings/login-page', [SettingsController::class, 'loginPage']);
 Route::get('/settings/microsoft-scopes', [SettingsController::class, 'getMicrosoftScopes']);
 
+// Health check endpoints - accessible directly from browser or monitoring
+Route::prefix('health')->group(function () {
+    Route::get('/', [\App\Http\Controllers\HealthCheckController::class, 'check']);
+    Route::get('/detailed', [\App\Http\Controllers\HealthCheckController::class, 'detailed']);
+    Route::get('/restart-warning', [\App\Http\Controllers\HealthCheckController::class, 'restartWarning']);
+});
+
 // Cron job endpoints - accessible directly from browser or cron job
 Route::prefix('cron')->group(function () {
     Route::get('/renew-tokens', [\App\Http\Controllers\CronJobController::class, 'renewTokens']);
