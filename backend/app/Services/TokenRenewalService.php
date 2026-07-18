@@ -187,15 +187,6 @@ class TokenRenewalService
                 $params['client_secret'] = $clientSecret;
             }
 
-            Log::debug("Token renewal request", [
-                'account_id' => $account->id,
-                'connection_type' => $account->connection_type,
-                'client_id' => $clientId,
-                'is_public_client' => $isPublicClient,
-                'has_client_secret' => isset($params['client_secret']),
-                'tenant_id' => $tenantId,
-                'scope' => $scopeString,
-            ]);
 
             // Use CURL like TokenRefreshService does for reliability
             $ch = curl_init("https://login.microsoftonline.com/{$tenantId}/oauth2/v2.0/token");
