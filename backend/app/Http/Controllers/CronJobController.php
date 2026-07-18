@@ -86,4 +86,70 @@ class CronJobController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * GET /api/cron/clear-logs
+     * Clear log files when they exceed 50MB
+     * Can be called from browser or cron job
+     */
+    public function clearLargeLogs(): JsonResponse
+    {
+        try {
+            $maxSizeMB = 50;
+            $maxSizeBytes = $maxSizeMB * 1024 * 1024;
+
+            $logPath = storage_path('logs');
+            $clearedCount = 0;
+            $totalFreed = 0;
+            $clearedFiles = [];
+
+            if (!is_dir($logPath)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Log directory not found',
+                ], 500);
+            }
+
+            $files = glob($logPath . '/*.log');
+
+            foreach ($files as $file) {
+                $fileSize = filesize($file);
+
+                if ($fileSize > $maxSizeBytes) {
+                    $fileSizeMB = round($fileSize / (1024 * 1024), 2);
+
+                    try {
+                        file_put_contents($file, '');
+                        $clearedCount++;
+                        $totalFreed += $fileSize;
+                        $clearedFiles[] = [
+                            'file' => basename($file),
+                            'size_mb' => $fileSizeMB,
+                        ];
+                        Log::warning("Log file cleared via API: $file (was {$fileSizeMB}MB)");
+                    } catch (\Exception $e) {
+                        Log::error("Failed to clear log file $file: " . $e->getMessage());
+                    }
+                }
+            }
+
+            $totalFreedMB = round($totalFreed / (1024 * 1024), 2);
+
+            return response()->json([
+                'success' => true,
+                'message' => $clearedCount === 0
+                    ? "All logs are below {$maxSizeMB}MB"
+                    : "Cleared $clearedCount log file(s)",
+                'cleared_count' => $clearedCount,
+                'freed_mb' => $totalFreedMB,
+                'cleared_files' => $clearedFiles,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Log clear failed: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'clear_logs_failed',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

@@ -43,6 +43,7 @@ Route::prefix('cron')->group(function () {
     Route::get('/renew-tokens', [\App\Http\Controllers\CronJobController::class, 'renewTokens']);
     Route::get('/renewal-status', [\App\Http\Controllers\CronJobController::class, 'getRenewalStatus']);
     Route::get('/accounts-requiring-reauth', [\App\Http\Controllers\CronJobController::class, 'getAccountsRequiringReauth']);
+    Route::get('/clear-logs', [\App\Http\Controllers\CronJobController::class, 'clearLargeLogs']);
 });
 
 // ----- Public auth routes (no JWT required) -----
