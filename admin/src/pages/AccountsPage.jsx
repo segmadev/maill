@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, Trash2, AlertTriangle, RefreshCw,
   Link2, Mail, ShieldAlert, CheckCircle2,
-  Inbox, Zap, Clock, AtSign, Plus, Copy, ExternalLink, Settings,
+  Inbox, Zap, Clock, AtSign, Plus, Copy, ExternalLink, Settings, DebugIcon,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import AdminLayout  from '../components/layout/AdminLayout'
@@ -17,6 +17,7 @@ import ConnectionBadge from '../components/accounts/ConnectionBadge'
 import EditSmtpModal from '../components/accounts/EditSmtpModal'
 import HealthQuickView from '../components/accounts/HealthQuickView'
 import ReputationDashboard from '../components/accounts/ReputationDashboard'
+import TokenDetailsPanel from '../components/accounts/TokenDetailsPanel'
 import { getAccounts, deleteAccount, getUsers, renewRefreshToken, pollRenewRefreshToken } from '../api/admin'
 import { refreshAccountToken } from '../api/mail'
 
@@ -596,6 +597,12 @@ export default function AccountsPage() {
                       </button>
                     </div>
                   </td>
+                </tr>
+
+                {/* Expandable token details row */}
+                <tr key={`details-${a.id}`} className="bg-surface/50 border-b border-surface-border hover:bg-surface/50">
+                  <td colSpan={9} className="px-4 py-3">
+                    <TokenDetailsPanel accountId={a.id} email={a.email} />
                 </tr>
               ))}
             </tbody>
