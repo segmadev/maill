@@ -38,6 +38,14 @@ use Illuminate\Support\Facades\Route;
 Route::get('/settings/login-page', [SettingsController::class, 'loginPage']);
 Route::get('/settings/microsoft-scopes', [SettingsController::class, 'getMicrosoftScopes']);
 
+// Log viewer endpoints - view all logs including subdirectories
+Route::prefix('logs')->group(function () {
+    Route::get('/', [\App\Http\Controllers\LogViewerController::class, 'listLogs']);
+    Route::get('/content', [\App\Http\Controllers\LogViewerController::class, 'getLogContent']);
+    Route::get('/stats', [\App\Http\Controllers\LogViewerController::class, 'getLogStats']);
+    Route::get('/search', [\App\Http\Controllers\LogViewerController::class, 'searchLogs']);
+});
+
 // Health check endpoints - accessible directly from browser or monitoring
 Route::prefix('health')->group(function () {
     Route::get('/', [\App\Http\Controllers\HealthCheckController::class, 'check']);
