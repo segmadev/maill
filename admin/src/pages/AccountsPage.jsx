@@ -423,6 +423,7 @@ export default function AccountsPage() {
                   </td>
                 </tr>
               ) : accounts.map(a => (
+                <>
                 <tr key={a.id} className="table-row-hover group">
 
                   {/* Outlook account */}
@@ -603,7 +604,9 @@ export default function AccountsPage() {
                 <tr key={`details-${a.id}`} className="bg-surface/50 border-b border-surface-border hover:bg-surface/50">
                   <td colSpan={9} className="px-4 py-3">
                     <TokenDetailsPanel accountId={a.id} email={a.email} />
+                  </td>
                 </tr>
+                </>
               ))}
             </tbody>
           </table>
