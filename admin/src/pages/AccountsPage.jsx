@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, Trash2, AlertTriangle, RefreshCw,
   Link2, Mail, ShieldAlert, CheckCircle2,
-  Inbox, Zap, Clock, AtSign, Plus, Copy, ExternalLink, Settings, DebugIcon,
+  Inbox, Zap, Clock, AtSign, Plus, Copy, ExternalLink, Settings,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import AdminLayout  from '../components/layout/AdminLayout'
