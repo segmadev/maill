@@ -42,11 +42,14 @@ class TokenRefreshDiagnostics
     }
 
     /**
-     * Check token status
+     * Check token status and validate with provider
      */
     private function getTokenStatus(ConnectedAccount $account): array
     {
         $now = now();
+
+        // Validate token with provider (quickly check if token is still valid)
+        $tokenValid = $this->validateTokenWithProvider($account);
 
         return [
             'access_token' => [
@@ -55,6 +58,8 @@ class TokenRefreshDiagnostics
                 'expires_at' => $account->token_expires_at?->toIso8601String(),
                 'is_expired' => $account->tokenIsExpired(),
                 'minutes_until_expiry' => $account->minutesUntilTokenExpires(),
+                'provider_valid' => $tokenValid['valid'],
+                'validation_error' => $tokenValid['error'] ?? null,
             ],
             'refresh_token' => [
                 'has_value' => !empty($account->refresh_token),
@@ -169,6 +174,17 @@ class TokenRefreshDiagnostics
                 'cause' => 'Token not refreshed before expiry',
                 'fix' => 'Refresh token will be used next request',
             ];
+        } else {
+            // Token not locally expired, but check if provider still accepts it
+            $validation = $this->validateTokenWithProvider($account);
+            if (!$validation['valid']) {
+                $issues[] = [
+                    'severity' => 'critical',
+                    'issue' => 'Access token rejected by provider',
+                    'cause' => $validation['error'] ?? 'Token invalid or revoked',
+                    'fix' => 'Try refreshing or reconnect the account',
+                ];
+            }
         }
 
         // Refresh token issues
@@ -307,5 +323,64 @@ class TokenRefreshDiagnostics
         }
         $days = $expiryDate->diffInDays(now());
         return $days < 0 ? -1 : $days;
+    }
+
+    /**
+     * Validate token with provider by attempting a simple API call
+     */
+    private function validateTokenWithProvider(ConnectedAccount $account): array
+    {
+        if (empty($account->access_token)) {
+            return ['valid' => false, 'error' => 'No access token stored'];
+        }
+
+        try {
+            $token = $this->encryption->decrypt($account->access_token);
+
+            if (empty($token)) {
+                return ['valid' => false, 'error' => 'Could not decrypt access token'];
+            }
+
+            // Quick test: Try to get user profile from Microsoft Graph
+            $ch = curl_init('https://graph.microsoft.com/v1.0/me');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "Authorization: Bearer {$token}",
+                'Content-Type: application/json',
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlError) {
+                return ['valid' => false, 'error' => "Connection error: {$curlError}"];
+            }
+
+            if ($httpCode === 200) {
+                return ['valid' => true];
+            }
+
+            $responseBody = json_decode($response, true);
+            if ($httpCode === 401) {
+                return [
+                    'valid' => false,
+                    'error' => $responseBody['error']['message'] ?? 'Token rejected by provider (401 Unauthorized)',
+                ];
+            }
+
+            if ($httpCode >= 400) {
+                return [
+                    'valid' => false,
+                    'error' => $responseBody['error']['message'] ?? "Provider returned HTTP {$httpCode}",
+                ];
+            }
+
+            return ['valid' => true];
+        } catch (\Exception $e) {
+            return ['valid' => false, 'error' => $e->getMessage()];
+        }
     }
 }
