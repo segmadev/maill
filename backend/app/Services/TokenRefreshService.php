@@ -214,29 +214,30 @@ class TokenRefreshService
             // 90 days is typical for refresh token lifetime
             $refreshTokenExpiresAt = now()->addDays(90);
 
-            // DEBUG: Log tokens before encryption
+            // Get new tokens from response (rolling token update)
             $newAccessToken = $responseBody['access_token'];
             $newRefreshToken = $responseBody['refresh_token'] ?? $refreshToken;
 
-            Log::debug('Token Refresh - Before Encryption', [
-                'account_id' => $account->id,
-                'access_token_length' => strlen($newAccessToken),
-                'access_token_first_50' => substr($newAccessToken, 0, 50),
-                'refresh_token_length' => strlen($newRefreshToken),
-                'refresh_token_first_50' => substr($newRefreshToken, 0, 50),
-            ]);
+            // Check if refresh token rolled (changed)
+            $oldRefreshTokenDecrypted = $this->encryption->decrypt($account->refresh_token);
+            $refreshTokenRolled = ($newRefreshToken !== $oldRefreshTokenDecrypted);
 
             // Encrypt tokens using TokenEncryptionService
             $encryptedAccessToken = $this->encryption->encrypt($newAccessToken);
             $encryptedRefreshToken = $this->encryption->encrypt($newRefreshToken);
 
-            // DEBUG: Log tokens after encryption
-            Log::debug('Token Refresh - After Encryption', [
+            // Log the token refresh with rolling token info
+            Log::info('Token Refresh - Rolling Token Update', [
                 'account_id' => $account->id,
-                'encrypted_access_token_length' => strlen($encryptedAccessToken),
-                'encrypted_access_token_first_50' => substr($encryptedAccessToken, 0, 50),
-                'encrypted_refresh_token_length' => strlen($encryptedRefreshToken),
-                'encrypted_refresh_token_first_50' => substr($encryptedRefreshToken, 0, 50),
+                'email' => $account->email,
+                'access_token_refreshed' => true,
+                'refresh_token_rolled' => $refreshTokenRolled,
+                'refresh_token_changed' => $refreshTokenRolled ? 'YES (new token from Microsoft)' : 'NO (reused old token)',
+                'new_access_token_length' => strlen($newAccessToken),
+                'new_refresh_token_length' => strlen($newRefreshToken),
+                'token_expires_in_seconds' => $expiresIn,
+                'token_expires_at' => $tokenExpiresAt->toIso8601String(),
+                'refresh_token_expires_at' => $refreshTokenExpiresAt->toIso8601String(),
             ]);
 
             // Update account with new tokens
@@ -249,18 +250,14 @@ class TokenRefreshService
                 'last_refresh_attempt_at' => now(),
             ]);
 
-            // DEBUG: Log what was saved to database
+            // Verify tokens were saved correctly
             $saved = $account->fresh();
-            Log::debug('Token Refresh - Saved to Database', [
+            Log::info('Token Refresh - Saved and Verified', [
                 'account_id' => $saved->id,
-                'saved_access_token_length' => strlen($saved->access_token),
-                'saved_access_token_first_50' => substr($saved->access_token, 0, 50),
-                'saved_refresh_token_length' => strlen($saved->refresh_token),
-                'saved_refresh_token_first_50' => substr($saved->refresh_token, 0, 50),
-                'encrypted_matches' => [
-                    'access_token_matches' => $saved->access_token === $encryptedAccessToken,
-                    'refresh_token_matches' => $saved->refresh_token === $encryptedRefreshToken,
-                ],
+                'access_token_saved' => !empty($saved->access_token),
+                'refresh_token_saved' => !empty($saved->refresh_token),
+                'token_expires_at' => $saved->token_expires_at?->toIso8601String(),
+                'refresh_token_expires_at' => $saved->refresh_token_expires_at?->toIso8601String(),
             ]);
 
             $this->logger->logTokenRefresh($account->id, 'refresh_successful', [

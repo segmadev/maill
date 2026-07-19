@@ -75,78 +75,21 @@ class AccountController extends Controller
 
     // =========================================================================
     // GET /api/accounts/{id}/token-diagnostic
-    // Diagnostic endpoint to troubleshoot token issues
+    // Comprehensive token diagnostics to troubleshoot refresh issues
     // =========================================================================
     public function tokenDiagnostic(int $id): JsonResponse
     {
-        $account = ConnectedAccount::find($id);
+        $diagnostics = app(\App\Services\TokenRefreshDiagnostics::class);
+        $result = $diagnostics->getDiagnostics($id);
 
-        if (!$account) {
-            return response()->json(['error' => 'Account not found'], 404);
-        }
-
-        $diagnostic = [
-            'account_id' => $account->id,
-            'email' => $account->email,
-            'connection_type' => $account->connection_type,
-            'checks' => [
-                'has_access_token' => !empty($account->access_token),
-                'has_refresh_token' => !empty($account->refresh_token),
-                'token_expires_at' => $account->token_expires_at?->toIso8601String(),
-                'token_is_expired' => $account->tokenIsExpired(),
-                'minutes_until_expiry' => $account->minutesUntilTokenExpires(),
-                'refresh_token_expires_at' => $account->refresh_token_expires_at?->toIso8601String(),
-                'refresh_token_is_expired' => $account->refreshTokenIsExpired(),
-                'token_status' => $account->tokenStatus(),
-            ],
-            'oauth_config' => [
-                'has_client_id' => !empty($account->oauth_client_id),
-                'has_client_secret' => !empty($account->oauth_client_secret),
-                'has_tenant_id' => !empty($account->oauth_tenant_id),
-                'tenant_id' => $account->oauth_tenant_id ?? 'common (default)',
-            ],
-            'failure_tracking' => [
-                'refresh_failed_count' => $account->refresh_failed_count ?? 0,
-                'last_refresh_attempt_at' => $account->last_refresh_attempt_at?->toIso8601String(),
-                'requires_reconnect' => ($account->refresh_failed_count ?? 0) >= 3,
-            ],
-            'issues' => [],
-        ];
-
-        // Identify issues
-        if (empty($account->access_token)) {
-            $diagnostic['issues'][] = 'No access token stored';
-        }
-        if (empty($account->refresh_token)) {
-            $diagnostic['issues'][] = 'No refresh token stored - cannot renew';
-        }
-        if ($account->refreshTokenIsExpired()) {
-            $diagnostic['issues'][] = 'Refresh token expired - must reconnect account';
-        }
-        if ($account->connection_type === 'oauth_manual' && empty($account->oauth_client_id)) {
-            $diagnostic['issues'][] = 'OAuth Client ID missing for manual account';
-        }
-        if ($account->connection_type === 'oauth_manual' && empty($account->oauth_client_secret)) {
-            $diagnostic['issues'][] = 'OAuth Client Secret missing for manual account';
-        }
-        if (($account->refresh_failed_count ?? 0) >= 3) {
-            $diagnostic['issues'][] = 'Failed refresh 3+ times - reconnection required';
+        if (isset($result['error'])) {
+            return response()->json($result, 404);
         }
 
-        // Recommendation
-        if (!empty($diagnostic['issues'])) {
-            if (in_array('Refresh token expired - must reconnect account', $diagnostic['issues'])) {
-                $diagnostic['recommendation'] = 'Reconnect this account via "Add Account" button';
-            } elseif (in_array('Failed refresh 3+ times - reconnection required', $diagnostic['issues'])) {
-                $diagnostic['recommendation'] = 'Try manual refresh, or reconnect if that fails';
-            } else {
-                $diagnostic['recommendation'] = 'Account has configuration issues - try reconnecting';
-            }
-        } else {
-            $diagnostic['recommendation'] = $account->tokenStatus() === 'valid' ? 'Token is healthy' : 'Try manual refresh';
-        }
-
-        return response()->json($diagnostic);
+        return response()->json([
+            'success' => true,
+            'diagnostics' => $result,
+        ]);
     }
 
     // =========================================================================
