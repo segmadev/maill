@@ -190,6 +190,15 @@ class SafeTokenRenewalService
             return false;
         }
 
+        // Check if refresh token has already expired
+        if ($account->refreshTokenIsExpired()) {
+            Log::warning("Refresh token has expired for account {$account->id}", [
+                'email' => $account->email,
+                'refresh_token_expired_at' => $account->refresh_token_expires_at,
+            ]);
+            return false;
+        }
+
         $retryCount = 0;
         $lastError = null;
 

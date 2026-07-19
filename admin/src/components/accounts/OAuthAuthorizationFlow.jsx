@@ -5,6 +5,7 @@ import Modal from '../ui/Modal'
 import Spinner from '../ui/Spinner'
 import Badge from '../ui/Badge'
 import { startOAuthAuthorization, refreshAccountToken } from '../../api/admin'
+import { API_BASE } from '../../api/client'
 
 /**
  * FIXED OAuth 2.0 Authorization Code Flow
@@ -266,7 +267,7 @@ export default function OAuthAuthorizationFlow({ open, onClose, onSuccess }) {
         }
 
         // FIRST: Check for OAuth errors/results
-        const statusResponse = await fetch(`http://localhost:8765/api/admin/oauth-status?state=${encodeURIComponent(state)}`, {
+        const statusResponse = await fetch(`${API_BASE}/admin/oauth-status?state=${encodeURIComponent(state)}`, {
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json',
@@ -288,7 +289,7 @@ export default function OAuthAuthorizationFlow({ open, onClose, onSuccess }) {
         }
 
         // SECOND: Check if account was added
-        const accountsResponse = await fetch('http://localhost:8765/api/admin/accounts', {
+        const accountsResponse = await fetch(`${API_BASE}/admin/accounts`, {
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json',
@@ -715,7 +716,7 @@ export default function OAuthAuthorizationFlow({ open, onClose, onSuccess }) {
 
                   console.log('Auth token (first 50 chars):', authToken.substring(0, 50) + '...')
 
-                  const accountsResponse = await fetch('http://localhost:8765/api/admin/accounts', {
+                  const accountsResponse = await fetch(`${API_BASE}/admin/accounts`, {
                     headers: {
                       'Authorization': `Bearer ${authToken}`,
                       'Content-Type': 'application/json',

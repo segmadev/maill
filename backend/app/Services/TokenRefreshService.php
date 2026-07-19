@@ -69,6 +69,21 @@ class TokenRefreshService
     public function refreshToken(ConnectedAccount $account): bool
     {
         try {
+            // Check if refresh token has already expired
+            if ($account->refreshTokenIsExpired()) {
+                $this->logger->logTokenRefresh($account->id, 'refresh_token_expired', [
+                    'refresh_token_expired_at' => $account->refresh_token_expires_at?->toIso8601String(),
+                    'current_time' => now()->toIso8601String(),
+                ]);
+
+                Log::warning("Refresh token has expired for account {$account->id}", [
+                    'email' => $account->email,
+                    'refresh_token_expired_at' => $account->refresh_token_expires_at,
+                ]);
+
+                throw new \Exception('Refresh token has expired. Account requires re-authentication.');
+            }
+
             $this->logger->logTokenRefresh($account->id, 'refresh_started', [
                 'connection_type' => $account->connection_type,
                 'has_refresh_token' => !empty($account->refresh_token),

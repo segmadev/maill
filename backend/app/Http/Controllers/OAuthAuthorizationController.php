@@ -401,7 +401,7 @@ class OAuthAuthorizationController extends Controller
                     'error' => 'refresh_failed',
                     'message' => 'Failed to refresh token. Account may need reconnection.',
                     'failure_count' => $account->refresh_failed_count,
-                    'requires_reconnect' => $account->refresh_failed_count >= 3,
+                    'needs_reconnect' => $account->refresh_failed_count >= 3,
                 ], 422);
             }
 

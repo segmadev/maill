@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import Modal from '../ui/Modal'
 import Spinner from '../ui/Spinner'
 import { testSmtp, startOAuthAuthorization } from '../../api/admin'
+import { API_BASE } from '../../api/client'
 
 export default function EditSmtpModal({ account, open, onClose, onSave }) {
   const [form, setForm] = useState({
@@ -139,7 +140,7 @@ export default function EditSmtpModal({ account, open, onClose, onSave }) {
         const pollInterval = setInterval(async () => {
           attempts++
           try {
-            const checkResult = await fetch(`http://localhost:8765/api/oauth-status?state=${result.state}`)
+            const checkResult = await fetch(`${API_BASE}/oauth-status?state=${result.state}`)
             const data = await checkResult.json()
 
             if (data.success) {

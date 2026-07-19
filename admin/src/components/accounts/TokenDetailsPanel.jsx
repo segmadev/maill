@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { ChevronDown, Copy, AlertTriangle, CheckCircle2, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Spinner from '../ui/Spinner'
+import { API_BASE } from '../../api/client'
 
 function TokenDetailsPanel({ accountId, email }) {
   const [expanded, setExpanded] = useState(false)
@@ -19,7 +20,7 @@ function TokenDetailsPanel({ accountId, email }) {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch(`http://localhost:8765/api/accounts/${accountId}/token-diagnostic`, {
+      const response = await fetch(`${API_BASE}/accounts/${accountId}/token-diagnostic`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
