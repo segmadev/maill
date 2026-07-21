@@ -275,13 +275,13 @@ export const listLogs = () =>
   client.get('/admin/logs').then((r) => r.data)
 
 export const getLog = (filename) =>
-  client.get(`/admin/logs/${filename}`).then((r) => r.data)
+  client.get('/admin/logs/content', { params: { file: filename } }).then((r) => r.data)
 
 export const clearLog = (filename) =>
-  client.delete(`/admin/logs/${filename}`).then((r) => r.data)
+  client.delete('/admin/logs/clear', { params: { file: filename } }).then((r) => r.data)
 
 export const clearAllLogs = () =>
-  client.delete('/admin/logs').then((r) => r.data)
+  client.delete('/admin/logs/clear-all').then((r) => r.data)
 
 export const downloadLog = (filename) =>
-  client.get(`/admin/logs/${filename}/download`, { responseType: 'blob' }).then((r) => r.data)
+  client.get('/admin/logs/download', { params: { file: filename }, responseType: 'blob' }).then((r) => r.data)

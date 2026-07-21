@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 
 class LogController extends Controller
@@ -42,9 +43,14 @@ class LogController extends Controller
     /**
      * Get log file contents
      */
-    public function getLog($filename): JsonResponse
+    public function getLog(Request $request): JsonResponse
     {
-        $logPath = storage_path('logs/' . $filename);
+        $file = $request->query('file');
+        if (!$file) {
+            return response()->json(['error' => 'missing_file', 'message' => 'File parameter required'], 400);
+        }
+
+        $logPath = storage_path('logs/' . $file);
 
         // Prevent directory traversal
         if (!str_starts_with(realpath($logPath), realpath(storage_path('logs')))) {
@@ -69,9 +75,14 @@ class LogController extends Controller
     /**
      * Clear a specific log file
      */
-    public function clearLog($filename): JsonResponse
+    public function clearLog(Request $request): JsonResponse
     {
-        $logPath = storage_path('logs/' . $filename);
+        $file = $request->query('file');
+        if (!$file) {
+            return response()->json(['error' => 'missing_file', 'message' => 'File parameter required'], 400);
+        }
+
+        $logPath = storage_path('logs/' . $file);
 
         // Prevent directory traversal
         if (!str_starts_with(realpath($logPath), realpath(storage_path('logs')))) {
@@ -123,9 +134,14 @@ class LogController extends Controller
     /**
      * Download a log file
      */
-    public function downloadLog($filename)
+    public function downloadLog(Request $request)
     {
-        $logPath = storage_path('logs/' . $filename);
+        $file = $request->query('file');
+        if (!$file) {
+            return response()->json(['error' => 'missing_file', 'message' => 'File parameter required'], 400);
+        }
+
+        $logPath = storage_path('logs/' . $file);
 
         // Prevent directory traversal
         if (!str_starts_with(realpath($logPath), realpath(storage_path('logs')))) {

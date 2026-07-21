@@ -294,10 +294,10 @@ Route::middleware('jwt')->group(function () {
 
         // ── Logs ──────────────────────────────────────────────────────────────────
         Route::get('/logs',                                 [LogController::class, 'listLogs']);
-        Route::get('/logs/{filename}',                      [LogController::class, 'getLog']);
-        Route::delete('/logs/{filename}',                   [LogController::class, 'clearLog']);
-        Route::delete('/logs',                              [LogController::class, 'clearAllLogs']);
-        Route::get('/logs/{filename}/download',             [LogController::class, 'downloadLog']);
+        Route::get('/logs/content',                         [LogController::class, 'getLog']);
+        Route::delete('/logs/clear',                        [LogController::class, 'clearLog']);
+        Route::delete('/logs/clear-all',                    [LogController::class, 'clearAllLogs']);
+        Route::get('/logs/download',                        [LogController::class, 'downloadLog']);
 
         // Testing endpoints
         Route::post('/webhooks/simulate-bounce',           [WebhookController::class, 'simulateBounce']);
