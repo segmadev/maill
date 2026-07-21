@@ -82,7 +82,7 @@ class LogController extends Controller
         $lines = array_reverse(explode("\n", $contents));
 
         return response()->json([
-            'filename' => $filename,
+            'filename' => $file,
             'size_kb' => round(filesize($logPath) / 1024, 2),
             'line_count' => count(array_filter($lines)),
             'contents' => implode("\n", $lines),
