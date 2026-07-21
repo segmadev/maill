@@ -51,14 +51,17 @@ class LogController extends Controller
         }
 
         $logPath = storage_path('logs/' . $file);
+        $logsDir = storage_path('logs');
 
         // Prevent directory traversal
-        if (!str_starts_with(realpath($logPath), realpath(storage_path('logs')))) {
-            return response()->json(['error' => 'Invalid file path'], 400);
+        $normalized = str_replace('\\', '/', $logPath);
+        $normalizedDir = str_replace('\\', '/', $logsDir);
+        if (strpos($normalized, $normalizedDir) !== 0) {
+            return response()->json(['error' => 'invalid_file', 'message' => 'Invalid file path'], 400);
         }
 
         if (!File::exists($logPath)) {
-            return response()->json(['error' => 'Log file not found'], 404);
+            return response()->json(['error' => 'file_not_found', 'message' => 'Log file not found'], 404);
         }
 
         $contents = File::get($logPath);
@@ -83,19 +86,22 @@ class LogController extends Controller
         }
 
         $logPath = storage_path('logs/' . $file);
+        $logsDir = storage_path('logs');
 
         // Prevent directory traversal
-        if (!str_starts_with(realpath($logPath), realpath(storage_path('logs')))) {
-            return response()->json(['error' => 'Invalid file path'], 400);
+        $normalized = str_replace('\\', '/', $logPath);
+        $normalizedDir = str_replace('\\', '/', $logsDir);
+        if (strpos($normalized, $normalizedDir) !== 0) {
+            return response()->json(['error' => 'invalid_file', 'message' => 'Invalid file path'], 400);
         }
 
         if (!File::exists($logPath)) {
-            return response()->json(['error' => 'Log file not found'], 404);
+            return response()->json(['error' => 'file_not_found', 'message' => 'Log file not found'], 404);
         }
 
         try {
             File::put($logPath, '');
-            return response()->json(['success' => true, 'message' => "Cleared $filename"]);
+            return response()->json(['success' => true, 'message' => "Cleared $file"]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -142,16 +148,19 @@ class LogController extends Controller
         }
 
         $logPath = storage_path('logs/' . $file);
+        $logsDir = storage_path('logs');
 
         // Prevent directory traversal
-        if (!str_starts_with(realpath($logPath), realpath(storage_path('logs')))) {
-            return response()->json(['error' => 'Invalid file path'], 400);
+        $normalized = str_replace('\\', '/', $logPath);
+        $normalizedDir = str_replace('\\', '/', $logsDir);
+        if (strpos($normalized, $normalizedDir) !== 0) {
+            return response()->json(['error' => 'invalid_file', 'message' => 'Invalid file path'], 400);
         }
 
         if (!File::exists($logPath)) {
-            return response()->json(['error' => 'Log file not found'], 404);
+            return response()->json(['error' => 'file_not_found', 'message' => 'Log file not found'], 404);
         }
 
-        return response()->download($logPath, $filename);
+        return response()->download($logPath, basename($logPath));
     }
 }

@@ -25,13 +25,16 @@ class LogViewerController extends Controller
             }
 
             $logs = [];
+            $logPathNormalized = rtrim(str_replace('\\', '/', $logPath), '/') . '/';
 
             // Recursively get all .log files
             $files = $this->getLogFiles($logPath);
 
             foreach ($files as $filePath) {
                 $fileSize = filesize($filePath);
-                $relativePath = str_replace($logPath . '/', '', $filePath);
+                // Normalize path separators and calculate relative path
+                $filePathNormalized = str_replace('\\', '/', $filePath);
+                $relativePath = str_replace($logPathNormalized, '', $filePathNormalized);
 
                 $logs[] = [
                     'name' => basename($filePath),
