@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\File;
 class LogController extends Controller
 {
     /**
-     * Get all log files
+     * Get all log files (recursive, including subdirectories)
      */
     public function listLogs(): JsonResponse
     {
@@ -17,17 +17,31 @@ class LogController extends Controller
         $logs = [];
 
         if (File::exists($logPath)) {
-            $files = File::files($logPath);
+            // Use recursive iterator to get all .log files including subdirectories
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($logPath, \RecursiveDirectoryIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::SELF_FIRST
+            );
 
-            foreach ($files as $file) {
-                $logs[] = [
-                    'name' => $file->getFilename(),
-                    'path' => $file->getPathname(),
-                    'size' => $file->getSize(),
-                    'size_kb' => round($file->getSize() / 1024, 2),
-                    'modified' => filemtime($file->getPathname()),
-                    'modified_at' => date('Y-m-d H:i:s', filemtime($file->getPathname())),
-                ];
+            $logPathNormalized = rtrim(str_replace('\\', '/', $logPath), '/') . '/';
+
+            foreach ($iterator as $item) {
+                if ($item->isFile() && $item->getExtension() === 'log') {
+                    $filePath = $item->getPathname();
+                    // Normalize path separators
+                    $filePathNormalized = str_replace('\\', '/', $filePath);
+                    // Calculate relative path
+                    $relativePath = str_replace($logPathNormalized, '', $filePathNormalized);
+
+                    $logs[] = [
+                        'name' => $item->getFilename(),
+                        'path' => $relativePath,
+                        'size' => $item->getSize(),
+                        'size_kb' => round($item->getSize() / 1024, 2),
+                        'modified' => $item->getMTime(),
+                        'modified_at' => date('Y-m-d H:i:s', $item->getMTime()),
+                    ];
+                }
             }
         }
 
