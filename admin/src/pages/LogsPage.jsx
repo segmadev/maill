@@ -34,7 +34,7 @@ export default function LogsPage() {
     setLogContent('')
     setLoadingContent(true)
     try {
-      const data = await getLog(log.name)
+      const data = await getLog(log.path)
       setSelectedLog(log)
       setLogContent(data.contents || '')
     } catch (err) {
@@ -45,12 +45,12 @@ export default function LogsPage() {
     }
   }
 
-  const handleClearLog = async (filename) => {
-    if (!window.confirm(`Clear log file "${filename}"?`)) return
+  const handleClearLog = async (log) => {
+    if (!window.confirm(`Clear log file "${log.name}"?`)) return
 
-    setDeleting(filename)
+    setDeleting(log.path)
     try {
-      await clearLog(filename)
+      await clearLog(log.path)
       toast.success('Log cleared')
       loadLogs()
       setSelectedLog(null)
@@ -79,13 +79,13 @@ export default function LogsPage() {
     }
   }
 
-  const handleDownloadLog = async (filename) => {
+  const handleDownloadLog = async (log) => {
     try {
-      const blob = await downloadLog(filename)
+      const blob = await downloadLog(log.path)
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = filename
+      a.download = log.name
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -97,7 +97,7 @@ export default function LogsPage() {
     }
   }
 
-  const totalSizeGb = (logs.reduce((sum, log) => sum + log.size, 0) / 1024 / 1024).toFixed(2)
+  const totalSizeGb = (logs.reduce((sum, log) => sum + (log.size_bytes || 0), 0) / 1024 / 1024).toFixed(2)
 
   return (
     <AdminLayout title="Server Logs">
@@ -154,9 +154,9 @@ export default function LogsPage() {
             <div className="col-span-1 overflow-y-auto space-y-2 pr-2">
               {logs.map((log) => (
                 <div
-                  key={log.name}
+                  key={log.path}
                   className={`p-3 rounded-lg border transition cursor-pointer ${
-                    selectedLog?.name === log.name
+                    selectedLog?.path === log.path
                       ? 'bg-surface border-brand'
                       : 'bg-surface border-surface-border hover:border-brand/40'
                   }`}
@@ -166,7 +166,7 @@ export default function LogsPage() {
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-white text-sm truncate">{log.name}</h4>
                       <div className="space-y-1 mt-1 text-[10px] text-gray-500">
-                        <div>{log.size_kb} KB</div>
+                        <div>{log.size_formatted}</div>
                         <div className="truncate">Modified: {log.modified_at}</div>
                       </div>
                     </div>
@@ -174,7 +174,7 @@ export default function LogsPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleDownloadLog(log.name)
+                          handleDownloadLog(log)
                         }}
                         className="p-1.5 hover:bg-surface-raised rounded transition"
                         title="Download"
@@ -184,9 +184,9 @@ export default function LogsPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleClearLog(log.name)
+                          handleClearLog(log)
                         }}
-                        disabled={deleting === log.name}
+                        disabled={deleting === log.path}
                         className="p-1.5 hover:bg-red-500/20 rounded transition disabled:opacity-50"
                         title="Clear"
                       >
@@ -205,7 +205,7 @@ export default function LogsPage() {
                   <div className="px-4 py-2 border-b border-surface-border flex items-center justify-between">
                     <div>
                       <h4 className="font-semibold text-white text-sm">{selectedLog.name}</h4>
-                      <p className="text-xs text-gray-500">{selectedLog.size_kb} KB</p>
+                      <p className="text-xs text-gray-500">{selectedLog.size_formatted}</p>
                     </div>
                     {loadingContent && <Loader size={14} className="animate-spin text-brand" />}
                   </div>
