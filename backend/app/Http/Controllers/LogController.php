@@ -10,8 +10,9 @@ class LogController extends Controller
 {
     /**
      * Get all log files (recursive, including subdirectories)
+     * Query params: sort=date|name, order=asc|desc
      */
-    public function listLogs(): JsonResponse
+    public function listLogs(Request $request): JsonResponse
     {
         $logPath = storage_path('logs');
         $logs = [];
@@ -45,12 +46,26 @@ class LogController extends Controller
             }
         }
 
-        // Sort by modified date, newest first
-        usort($logs, fn($a, $b) => $b['modified'] <=> $a['modified']);
+        // Get sort parameters
+        $sortBy = $request->query('sort', 'date'); // date or name
+        $sortOrder = $request->query('order', 'desc'); // asc or desc
+
+        // Sort logs
+        if ($sortBy === 'name') {
+            usort($logs, fn($a, $b) => strcmp($a['name'], $b['name']));
+        } else {
+            usort($logs, fn($a, $b) => $b['modified'] <=> $a['modified']);
+        }
+
+        // Reverse if ascending order
+        if ($sortOrder === 'asc') {
+            $logs = array_reverse($logs);
+        }
 
         return response()->json([
             'logs' => $logs,
             'total_size_kb' => array_sum(array_column($logs, 'size_kb')),
+            'sort' => ['by' => $sortBy, 'order' => $sortOrder],
         ]);
     }
 

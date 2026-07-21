@@ -11,15 +11,18 @@ export default function LogsPage() {
   const [selectedLog, setSelectedLog] = useState(null)
   const [logContent, setLogContent] = useState('')
   const [loadingContent, setLoadingContent] = useState(false)
+  const [sortBy, setSortBy] = useState('date')
+  const [sortOrder, setSortOrder] = useState('desc')
 
   useEffect(() => {
     loadLogs()
-  }, [])
+  }, [sortBy, sortOrder])
 
   const loadLogs = async () => {
     setLoading(true)
     try {
-      const data = await listLogs()
+      const client = (await import('../api/client')).default
+      const data = await client.get('/admin/logs', { params: { sort: sortBy, order: sortOrder } }).then(r => r.data)
       setLogs(data.logs || [])
     } catch (err) {
       toast.error('Failed to load logs')
@@ -125,6 +128,56 @@ export default function LogsPage() {
             >
               <Trash2 size={14} />
               {deleting === 'all' ? 'Clearing...' : 'Clear All'}
+            </button>
+          </div>
+        </div>
+
+        {/* Sort Controls */}
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-surface border border-surface-border">
+          <span className="text-xs font-medium text-gray-400">Sort by:</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSortBy('date')}
+              className={`text-xs px-3 py-1.5 rounded transition ${
+                sortBy === 'date'
+                  ? 'bg-brand text-white'
+                  : 'bg-surface-raised text-gray-300 hover:bg-surface-border'
+              }`}
+            >
+              Date
+            </button>
+            <button
+              onClick={() => setSortBy('name')}
+              className={`text-xs px-3 py-1.5 rounded transition ${
+                sortBy === 'name'
+                  ? 'bg-brand text-white'
+                  : 'bg-surface-raised text-gray-300 hover:bg-surface-border'
+              }`}
+            >
+              Name
+            </button>
+          </div>
+          <span className="text-xs font-medium text-gray-400 ml-4">Order:</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSortOrder('desc')}
+              className={`text-xs px-3 py-1.5 rounded transition ${
+                sortOrder === 'desc'
+                  ? 'bg-brand text-white'
+                  : 'bg-surface-raised text-gray-300 hover:bg-surface-border'
+              }`}
+            >
+              Newest
+            </button>
+            <button
+              onClick={() => setSortOrder('asc')}
+              className={`text-xs px-3 py-1.5 rounded transition ${
+                sortOrder === 'asc'
+                  ? 'bg-brand text-white'
+                  : 'bg-surface-raised text-gray-300 hover:bg-surface-border'
+              }`}
+            >
+              Oldest
             </button>
           </div>
         </div>
