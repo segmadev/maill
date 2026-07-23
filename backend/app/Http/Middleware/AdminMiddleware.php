@@ -9,13 +9,21 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Gates every /api/admin/* route.
- * Must run AFTER JwtMiddleware (relies on auth_user_id being set on the request).
+ * Works with both:
+ * - JWT: relies on auth_user_id being set on the request
+ * - BFF OAuth: uses authenticated user from request->user()
  */
 class AdminMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $user = User::find($request->input('auth_user_id'));
+        // Try to get user from either BFF OAuth or JWT
+        $user = $request->user();
+
+        if ($user === null) {
+            // Fallback to JWT auth_user_id
+            $user = User::find($request->input('auth_user_id'));
+        }
 
         if ($user === null || !$user->is_admin) {
             return response()->json([
