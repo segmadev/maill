@@ -3,6 +3,7 @@
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\JwtMiddleware;
 use App\Http\Middleware\TokenRefreshMiddleware;
+use App\Http\Middleware\OAuthSessionMiddleware;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'jwt'           => JwtMiddleware::class,
             'token.refresh' => TokenRefreshMiddleware::class,
             'admin'         => AdminMiddleware::class,
+            'oauth.session' => OAuthSessionMiddleware::class,
         ]);
 
         // Allow the frontend origin.  Update for production.

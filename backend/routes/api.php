@@ -22,6 +22,7 @@ use App\Http\Controllers\RuleController;
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\SignatureManagementController;
 use App\Http\Controllers\LogController;
+use App\Http\Controllers\OAuthBFFController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -44,6 +45,14 @@ Route::prefix('logs')->group(function () {
     Route::get('/content', [\App\Http\Controllers\LogViewerController::class, 'getLogContent']);
     Route::get('/stats', [\App\Http\Controllers\LogViewerController::class, 'getLogStats']);
     Route::get('/search', [\App\Http\Controllers\LogViewerController::class, 'searchLogs']);
+});
+
+// Backend-for-Frontend OAuth (BFF) - New OAuth architecture
+Route::prefix('auth')->group(function () {
+    Route::get('/microsoft/login', [OAuthBFFController::class, 'initiateLogin'])->name('oauth.login');
+    Route::get('/microsoft/callback', [OAuthBFFController::class, 'handleCallback'])->name('oauth.callback');
+    Route::get('/me', [OAuthBFFController::class, 'getCurrentUser'])->middleware(['oauth.session']);
+    Route::post('/logout', [OAuthBFFController::class, 'logout'])->middleware(['oauth.session']);
 });
 
 // Health check endpoints - accessible directly from browser or monitoring
