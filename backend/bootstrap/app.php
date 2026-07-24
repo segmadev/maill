@@ -5,6 +5,7 @@ use App\Http\Middleware\JwtMiddleware;
 use App\Http\Middleware\TokenRefreshMiddleware;
 use App\Http\Middleware\OAuthSessionMiddleware;
 use App\Http\Middleware\ApiAuthMiddleware;
+use App\Http\Middleware\ConnectedAccountTokenRefreshMiddleware;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -29,11 +30,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         // Register named aliases so route files can reference them concisely.
         $middleware->alias([
-            'jwt'           => JwtMiddleware::class,
-            'token.refresh' => TokenRefreshMiddleware::class,
-            'admin'         => AdminMiddleware::class,
-            'oauth.session' => OAuthSessionMiddleware::class,
-            'api.auth'      => ApiAuthMiddleware::class,
+            'jwt'                           => JwtMiddleware::class,
+            'token.refresh'                 => TokenRefreshMiddleware::class,
+            'admin'                         => AdminMiddleware::class,
+            'oauth.session'                 => OAuthSessionMiddleware::class,
+            'api.auth'                      => ApiAuthMiddleware::class,
+            'connected.account.token.refresh' => ConnectedAccountTokenRefreshMiddleware::class,
         ]);
 
         // Allow the frontend origin.  Update for production.

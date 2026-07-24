@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
+import { checkOAuthSession } from './utils/sessionCheck'
 import LoginPage         from './pages/LoginPage'
 import DashboardPage     from './pages/DashboardPage'
 import UsersPage         from './pages/UsersPage'
@@ -20,27 +22,27 @@ import OAuthDebugPage from './pages/OAuthDebugPage'
 
 /**
  * Smart root redirect based on current session state:
- *   admin token  → /dashboard
+ *   admin token/oauth  → /dashboard
  *   user token   → /user/home
  *   no token     → /user/login
  */
 function RootRedirect() {
-  const { token, user } = useAuthStore()
-  if (!token) return <Navigate to="/user/login" replace />
+  const { token, user, isOAuthSession } = useAuthStore()
+  if (!token && !isOAuthSession) return <Navigate to="/user/login" replace />
   return <Navigate to={user?.is_admin ? '/dashboard' : '/user/home'} replace />
 }
 
 /** If already authenticated, skip the user login screen. */
 function GuestOnly({ children }) {
-  const { token, user } = useAuthStore()
-  if (token) return <Navigate to={user?.is_admin ? '/dashboard' : '/user/home'} replace />
+  const { token, user, isOAuthSession } = useAuthStore()
+  if (token || isOAuthSession) return <Navigate to={user?.is_admin ? '/dashboard' : '/user/home'} replace />
   return children
 }
 
-/** Requires a valid JWT + admin flag. Non-admins are sent to /user/home. */
+/** Requires a valid JWT or BFF OAuth session + admin flag. Non-admins are sent to /user/home. */
 function RequireAdmin({ children }) {
-  const { token, user } = useAuthStore()
-  if (!token) return <Navigate to="/login" replace />
+  const { token, user, isOAuthSession } = useAuthStore()
+  if (!token && !isOAuthSession) return <Navigate to="/login" replace />
   if (!user?.is_admin) return <Navigate to="/user/home" replace />
   return children
 }
@@ -53,6 +55,23 @@ function RequireUser({ children }) {
 }
 
 export default function App() {
+  const [sessionChecked, setSessionChecked] = useState(false)
+
+  useEffect(() => {
+    const checkSession = async () => {
+      // Try to restore OAuth session from cookie
+      await checkOAuthSession()
+      setSessionChecked(true)
+    }
+
+    checkSession()
+  }, [])
+
+  // Show loading state while checking session
+  if (!sessionChecked) {
+    return null
+  }
+
   return (
     <Routes>
       {/* ── Smart root ────────────────────────────────────────────────────── */}

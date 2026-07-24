@@ -1,18 +1,31 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { Shield, Eye, EyeOff } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { Shield, Eye, EyeOff, Mail } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { login } from '../api/admin'
 import { useAuthStore } from '../store/authStore'
+import { API_BASE } from '../api/client'
 
 export default function LoginPage() {
-  const navigate  = useNavigate()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { setAuth } = useAuthStore()
-  const [form, setForm]       = useState({ email: '', password: '' })
-  const [showPw, setShowPw]   = useState(false)
+  const [form, setForm] = useState({ email: '', password: '' })
+  const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(false)
 
-  const handle = async (e) => {
+  // Check for OAuth errors in URL
+  useEffect(() => {
+    const error = searchParams.get('error')
+    if (error === 'session_expired') {
+      toast.error('Your session expired. Please log in again.')
+    } else if (error) {
+      toast.error(`OAuth login failed: ${error}`)
+    }
+  }, [searchParams])
+
+  const handleEmailPasswordLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
     try {
@@ -34,6 +47,12 @@ export default function LoginPage() {
     }
   }
 
+  const handleOAuthLogin = () => {
+    setOauthLoading(true)
+    // Redirect to backend OAuth flow
+    window.location.href = `${API_BASE}/auth/microsoft/login`
+  }
+
   return (
     <div className="min-h-screen bg-surface flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
@@ -46,8 +65,27 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500 mt-1">Mail Manager — Administrator Access</p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handle} className="card space-y-4">
+        {/* OAuth Login */}
+        <div className="card mb-4">
+          <button
+            onClick={handleOAuthLogin}
+            disabled={oauthLoading}
+            className="btn-primary w-full justify-center py-2.5 flex items-center gap-2"
+          >
+            <Mail size={16} />
+            {oauthLoading ? 'Redirecting to Microsoft…' : 'Sign in with Microsoft'}
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 my-6">
+          <div className="flex-1 h-px bg-gray-700"></div>
+          <span className="text-xs text-gray-500">or</span>
+          <div className="flex-1 h-px bg-gray-700"></div>
+        </div>
+
+        {/* Email/Password Form */}
+        <form onSubmit={handleEmailPasswordLogin} className="card space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Email address</label>
             <input

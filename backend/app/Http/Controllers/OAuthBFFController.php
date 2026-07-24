@@ -39,7 +39,6 @@ class OAuthBFFController extends Controller
 
         // Store in session temporarily (5 minutes)
         $session = OAuthSession::create([
-            'user_id' => 0, // Temporary, will be set after login
             'pkce_code_challenge' => $codeChallenge,
             'oauth_state' => $state,
             'state_expires_at' => now()->addMinutes(5),

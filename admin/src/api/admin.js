@@ -4,6 +4,9 @@ import client from './client'
 export const login = (email, password) =>
   client.post('/auth/login', { email, password }).then((r) => r.data)
 
+export const logoutOAuth = () =>
+  client.post('/auth/logout').then((r) => r.data)
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export const getDashboard = () =>
   client.get('/admin/dashboard').then((r) => r.data)

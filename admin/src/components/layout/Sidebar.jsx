@@ -4,6 +4,7 @@ import {
   LogOut, Send, ChevronLeft, ChevronRight, UserCircle, Zap, FileText, Sliders, AlertCircle,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
+import { performOAuthLogout } from '../../utils/sessionCheck'
 
 const links = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -19,8 +20,17 @@ const links = [
 ]
 
 export default function Sidebar({ collapsed, onToggle }) {
-  const { user, logout } = useAuthStore()
+  const { user, logout, isOAuthSession } = useAuthStore()
   const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    if (isOAuthSession) {
+      await performOAuthLogout()
+    } else {
+      logout()
+    }
+    navigate('/login', { replace: true })
+  }
 
   return (
     <aside
@@ -78,7 +88,7 @@ export default function Sidebar({ collapsed, onToggle }) {
               {user?.name?.[0] ?? 'A'}
             </button>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               title="Sign out"
               className="p-1 rounded hover:bg-surface-raised text-gray-500 hover:text-red-400 transition-colors"
             >

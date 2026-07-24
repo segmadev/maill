@@ -21,20 +21,30 @@ client.interceptors.request.use((config) => {
   return config
 })
 
-// Auto-logout only on genuine JWT auth failures (missing/expired/invalid token).
-// Graph API errors arrive with error:'graph_error' — those must NOT trigger logout
-// because the admin session is still valid; only the connected account needs re-auth.
+// Handle authentication errors
 client.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
       const code = err.response?.data?.error ?? ''
-      if (code !== 'graph_error') {
-        const { user } = useAuthStore.getState()
-        useAuthStore.getState().logout()
-        // Admins go back to the admin login page; regular users to the user login page.
-        window.location.href = user?.is_admin ? '/login' : '/user/login'
+
+      // Graph API errors should NOT trigger logout
+      // (admin session is valid, only connected account needs re-auth)
+      if (code === 'graph_error') {
+        return Promise.reject(err)
       }
+
+      // requires_reauth: BFF session expired or invalid, need to re-authenticate
+      if (code === 'requires_reauth') {
+        useAuthStore.getState().logout()
+        window.location.href = '/login?error=session_expired'
+        return Promise.reject(err)
+      }
+
+      // Any other 401: invalid/expired JWT or session
+      const { user } = useAuthStore.getState()
+      useAuthStore.getState().logout()
+      window.location.href = user?.is_admin ? '/login' : '/user/login'
     }
     return Promise.reject(err)
   }
